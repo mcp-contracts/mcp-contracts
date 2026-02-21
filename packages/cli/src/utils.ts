@@ -105,9 +105,22 @@ export function stripAnsi(str: string): string {
 }
 
 /**
+ * Error class for intentional non-error exits (e.g., exit code 1 for breaking changes).
+ * Used to signal that the process should exit with a specific code without
+ * being caught by the generic error handler.
+ */
+export class CliExitError extends Error {
+  constructor(public readonly exitCode: number) {
+    super(`exit(${exitCode})`);
+    this.name = "CliExitError";
+  }
+}
+
+/**
  * Wraps an async command action handler with error handling.
  *
  * Catches errors, prints to stderr, and exits with code 2.
+ * Re-throws CliExitError so intentional exits are not treated as errors.
  *
  * @param fn - The async action function to wrap.
  * @returns A wrapped function that handles errors gracefully.
@@ -117,6 +130,10 @@ export function handleErrors<T extends (...args: never[]) => Promise<void>>(fn: 
     try {
       await fn(...args);
     } catch (err) {
+      if (err instanceof CliExitError) {
+        process.exit(err.exitCode);
+        return;
+      }
       const message = err instanceof Error ? err.message : String(err);
       process.stderr.write(`Error: ${message}\n`);
       process.exit(2);

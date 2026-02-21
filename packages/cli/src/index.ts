@@ -7,6 +7,7 @@
  */
 
 import { Command } from "commander";
+import { createDiffCommand } from "./commands/diff.js";
 import { createInspectCommand } from "./commands/inspect.js";
 
 const program = new Command();
@@ -21,6 +22,7 @@ program
   .option("--quiet", "Suppress non-essential output")
   .option("--verbose", "Show detailed information");
 
+program.addCommand(createDiffCommand());
 program.addCommand(createInspectCommand());
 
 program.parse();
