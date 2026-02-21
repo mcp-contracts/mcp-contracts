@@ -1,6 +1,6 @@
-import { Command } from "commander";
 import { createSnapshot } from "@mcp-contracts/core";
 import type { SnapshotCapture, SnapshotServer } from "@mcp-contracts/core";
+import { Command } from "commander";
 import { handleErrors, parseEnvPairs, writeOutput } from "../utils.js";
 import { captureServerData, connectToServer, readMcpConfig } from "./mcp-client.js";
 import type { ResolvedTransport } from "./mcp-client.js";
@@ -92,9 +92,10 @@ export function createSnapshotCommand(): Command {
           capabilities: serverCapabilities as Record<string, unknown>,
         };
 
-        const source = config.transport === "stdio"
-          ? [config.command, ...(config.args ?? [])].join(" ")
-          : config.url;
+        const source =
+          config.transport === "stdio"
+            ? [config.command, ...(config.args ?? [])].join(" ")
+            : config.url;
 
         const capture: SnapshotCapture = {
           transport: config.transport,
@@ -112,9 +113,7 @@ export function createSnapshotCommand(): Command {
         });
 
         const prettyPrint = outputPath !== undefined || process.stdout.isTTY;
-        const json = prettyPrint
-          ? JSON.stringify(snapshot, null, 2)
-          : JSON.stringify(snapshot);
+        const json = prettyPrint ? JSON.stringify(snapshot, null, 2) : JSON.stringify(snapshot);
 
         writeOutput(`${json}\n`, outputPath);
 

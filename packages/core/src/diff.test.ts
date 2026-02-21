@@ -14,6 +14,12 @@ const v2Safe = loadFixture("server-v2-safe.mcpc.json");
 const v2Breaking = loadFixture("server-v2-breaking.mcpc.json");
 const v2Warning = loadFixture("server-v2-warning.mcpc.json");
 
+const v1ContactList = v1.resources["contacts://list"] ?? { description: "" };
+const v1SummarizeContact = v1.prompts.summarize_contact ?? {
+  description: "",
+  arguments: [],
+};
+
 describe("diffSnapshots — tool-level changes", () => {
   it("reports no changes for identical snapshots", () => {
     const report = diffSnapshots(v1, v1);
@@ -25,28 +31,28 @@ describe("diffSnapshots — tool-level changes", () => {
     const report = diffSnapshots(v1, v2Safe);
     const added = report.changes.filter((c) => c.type === "added");
     expect(added).toHaveLength(1);
-    expect(added[0].name).toBe("update_contact");
-    expect(added[0].severity).toBe("safe");
-    expect(added[0].category).toBe("tool");
+    expect(added[0]?.name).toBe("update_contact");
+    expect(added[0]?.severity).toBe("safe");
+    expect(added[0]?.category).toBe("tool");
   });
 
   it("detects a tool removal as breaking", () => {
     const report = diffSnapshots(v1, v2Breaking);
     const removed = report.changes.filter((c) => c.type === "removed");
     expect(removed).toHaveLength(1);
-    expect(removed[0].name).toBe("delete_contact");
-    expect(removed[0].severity).toBe("breaking");
+    expect(removed[0]?.name).toBe("delete_contact");
+    expect(removed[0]?.severity).toBe("breaking");
   });
 
   it("detects a description change as warning", () => {
     const report = diffSnapshots(v1, v2Warning);
     const modified = report.changes.filter((c) => c.type === "modified");
     expect(modified).toHaveLength(1);
-    expect(modified[0].name).toBe("search_contacts");
-    expect(modified[0].severity).toBe("warning");
-    expect(modified[0].path).toBe("description");
-    expect(modified[0].before).toBe("Searches contacts by query string");
-    expect(modified[0].after).toContain("You must always use this tool");
+    expect(modified[0]?.name).toBe("search_contacts");
+    expect(modified[0]?.severity).toBe("warning");
+    expect(modified[0]?.path).toBe("description");
+    expect(modified[0]?.before).toBe("Searches contacts by query string");
+    expect(modified[0]?.after).toContain("You must always use this tool");
   });
 
   it("reports correct summary counts", () => {
@@ -70,8 +76,8 @@ describe("diffSnapshots — tool-level changes", () => {
     };
     const report = diffSnapshots(v1, mixed);
     expect(report.changes.length).toBeGreaterThan(1);
-    expect(report.changes[0].severity).toBe("breaking");
-    expect(report.changes[report.changes.length - 1].severity).toBe("safe");
+    expect(report.changes[0]?.severity).toBe("breaking");
+    expect(report.changes[report.changes.length - 1]?.severity).toBe("safe");
   });
 
   it("filters by minSeverity", () => {
@@ -110,8 +116,8 @@ describe("diffSnapshots — resource changes", () => {
     const report = diffSnapshots(v1, after);
     const removed = report.changes.filter((c) => c.category === "resource" && c.type === "removed");
     expect(removed).toHaveLength(1);
-    expect(removed[0].name).toBe("contacts://list");
-    expect(removed[0].severity).toBe("breaking");
+    expect(removed[0]?.name).toBe("contacts://list");
+    expect(removed[0]?.severity).toBe("breaking");
   });
 
   it("detects resource added as safe", () => {
@@ -125,7 +131,7 @@ describe("diffSnapshots — resource changes", () => {
     const report = diffSnapshots(v1, after);
     const added = report.changes.filter((c) => c.category === "resource" && c.type === "added");
     expect(added).toHaveLength(1);
-    expect(added[0].severity).toBe("safe");
+    expect(added[0]?.severity).toBe("safe");
   });
 
   it("detects resource MIME type changed as warning", () => {
@@ -133,15 +139,17 @@ describe("diffSnapshots — resource changes", () => {
       ...v1,
       resources: {
         "contacts://list": {
-          ...v1.resources["contacts://list"]!,
+          ...v1ContactList,
           mimeType: "text/csv",
         },
       },
     };
     const report = diffSnapshots(v1, after);
-    const mimeChange = report.changes.filter((c) => c.category === "resource" && c.path === "mimeType");
+    const mimeChange = report.changes.filter(
+      (c) => c.category === "resource" && c.path === "mimeType",
+    );
     expect(mimeChange).toHaveLength(1);
-    expect(mimeChange[0].severity).toBe("warning");
+    expect(mimeChange[0]?.severity).toBe("warning");
   });
 
   it("detects resource description changed as warning", () => {
@@ -149,15 +157,17 @@ describe("diffSnapshots — resource changes", () => {
       ...v1,
       resources: {
         "contacts://list": {
-          ...v1.resources["contacts://list"]!,
+          ...v1ContactList,
           description: "Updated list of all contacts",
         },
       },
     };
     const report = diffSnapshots(v1, after);
-    const descChange = report.changes.filter((c) => c.category === "resource" && c.path === "description");
+    const descChange = report.changes.filter(
+      (c) => c.category === "resource" && c.path === "description",
+    );
     expect(descChange).toHaveLength(1);
-    expect(descChange[0].severity).toBe("warning");
+    expect(descChange[0]?.severity).toBe("warning");
   });
 });
 
@@ -167,8 +177,8 @@ describe("diffSnapshots — prompt changes", () => {
     const report = diffSnapshots(v1, after);
     const removed = report.changes.filter((c) => c.category === "prompt" && c.type === "removed");
     expect(removed).toHaveLength(1);
-    expect(removed[0].name).toBe("summarize_contact");
-    expect(removed[0].severity).toBe("breaking");
+    expect(removed[0]?.name).toBe("summarize_contact");
+    expect(removed[0]?.severity).toBe("breaking");
   });
 
   it("detects prompt added as safe", () => {
@@ -182,7 +192,7 @@ describe("diffSnapshots — prompt changes", () => {
     const report = diffSnapshots(v1, after);
     const added = report.changes.filter((c) => c.category === "prompt" && c.type === "added");
     expect(added).toHaveLength(1);
-    expect(added[0].severity).toBe("safe");
+    expect(added[0]?.severity).toBe("safe");
   });
 
   it("detects required prompt argument added as breaking", () => {
@@ -190,20 +200,20 @@ describe("diffSnapshots — prompt changes", () => {
       ...v1,
       prompts: {
         summarize_contact: {
-          ...v1.prompts.summarize_contact!,
+          ...v1SummarizeContact,
           arguments: [
-            ...v1.prompts.summarize_contact!.arguments,
+            ...v1SummarizeContact.arguments,
             { name: "format", description: "Output format", required: true },
           ],
         },
       },
     };
     const report = diffSnapshots(v1, after);
-    const argAdded = report.changes.filter((c) =>
-      c.category === "prompt" && c.id.includes("format.added"),
+    const argAdded = report.changes.filter(
+      (c) => c.category === "prompt" && c.id.includes("format.added"),
     );
     expect(argAdded).toHaveLength(1);
-    expect(argAdded[0].severity).toBe("breaking");
+    expect(argAdded[0]?.severity).toBe("breaking");
   });
 
   it("detects optional prompt argument added as safe", () => {
@@ -211,20 +221,20 @@ describe("diffSnapshots — prompt changes", () => {
       ...v1,
       prompts: {
         summarize_contact: {
-          ...v1.prompts.summarize_contact!,
+          ...v1SummarizeContact,
           arguments: [
-            ...v1.prompts.summarize_contact!.arguments,
+            ...v1SummarizeContact.arguments,
             { name: "verbose", description: "Include details" },
           ],
         },
       },
     };
     const report = diffSnapshots(v1, after);
-    const argAdded = report.changes.filter((c) =>
-      c.category === "prompt" && c.id.includes("verbose.added"),
+    const argAdded = report.changes.filter(
+      (c) => c.category === "prompt" && c.id.includes("verbose.added"),
     );
     expect(argAdded).toHaveLength(1);
-    expect(argAdded[0].severity).toBe("safe");
+    expect(argAdded[0]?.severity).toBe("safe");
   });
 
   it("detects prompt argument removed as warning", () => {
@@ -232,17 +242,17 @@ describe("diffSnapshots — prompt changes", () => {
       ...v1,
       prompts: {
         summarize_contact: {
-          ...v1.prompts.summarize_contact!,
+          ...v1SummarizeContact,
           arguments: [],
         },
       },
     };
     const report = diffSnapshots(v1, after);
-    const argRemoved = report.changes.filter((c) =>
-      c.category === "prompt" && c.id.includes("contactId.removed"),
+    const argRemoved = report.changes.filter(
+      (c) => c.category === "prompt" && c.id.includes("contactId.removed"),
     );
     expect(argRemoved).toHaveLength(1);
-    expect(argRemoved[0].severity).toBe("warning");
+    expect(argRemoved[0]?.severity).toBe("warning");
   });
 
   it("detects prompt description changed as warning", () => {
@@ -250,16 +260,16 @@ describe("diffSnapshots — prompt changes", () => {
       ...v1,
       prompts: {
         summarize_contact: {
-          ...v1.prompts.summarize_contact!,
+          ...v1SummarizeContact,
           description: "Generate a detailed summary of contact info",
         },
       },
     };
     const report = diffSnapshots(v1, after);
-    const descChange = report.changes.filter((c) =>
-      c.category === "prompt" && c.path === "description",
+    const descChange = report.changes.filter(
+      (c) => c.category === "prompt" && c.path === "description",
     );
     expect(descChange).toHaveLength(1);
-    expect(descChange[0].severity).toBe("warning");
+    expect(descChange[0]?.severity).toBe("warning");
   });
 });

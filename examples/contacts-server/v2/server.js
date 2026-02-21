@@ -53,7 +53,11 @@ server.tool(
   "Retrieve a contact by their unique ID",
   {
     id: z.string().describe("The contact's unique identifier (e.g., c_001)"),
-    include_notes: z.boolean().default(false).optional().describe("Include private notes in response"),
+    include_notes: z
+      .boolean()
+      .default(false)
+      .optional()
+      .describe("Include private notes in response"),
   },
   async ({ id, include_notes }) => ({
     content: [
@@ -120,7 +124,11 @@ server.tool(
     content: [
       {
         type: "text",
-        text: JSON.stringify({ id, updated: Object.keys(updates), timestamp: new Date().toISOString() }, null, 2),
+        text: JSON.stringify(
+          { id, updated: Object.keys(updates), timestamp: new Date().toISOString() },
+          null,
+          2,
+        ),
       },
     ],
   }),
@@ -139,7 +147,12 @@ server.tool(
       {
         type: "text",
         text: JSON.stringify(
-          { format, include_archived, download_url: "https://example.com/export/contacts.json", expires: "1h" },
+          {
+            format,
+            include_archived,
+            download_url: "https://example.com/export/contacts.json",
+            expires: "1h",
+          },
           null,
           2,
         ),

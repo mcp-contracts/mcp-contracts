@@ -84,9 +84,7 @@ export function formatTerminal(report: DiffReport): string {
   const lines: string[] = [];
 
   // Header
-  lines.push(
-    `${ANSI.bold}MCP Contract Diff${ANSI.reset}`,
-  );
+  lines.push(`${ANSI.bold}MCP Contract Diff${ANSI.reset}`);
   lines.push(
     `${ANSI.dim}${report.meta.before.serverName}@${report.meta.before.serverVersion} → ${report.meta.after.serverName}@${report.meta.after.serverVersion}${ANSI.reset}`,
   );
@@ -117,7 +115,9 @@ export function formatTerminal(report: DiffReport): string {
     const categoryChanges = report.changes.filter((c) => c.category === category);
     if (categoryChanges.length === 0) continue;
 
-    lines.push(`${ANSI.bold}${ANSI.cyan}${category.charAt(0).toUpperCase() + category.slice(1)}s${ANSI.reset}`);
+    lines.push(
+      `${ANSI.bold}${ANSI.cyan}${category.charAt(0).toUpperCase() + category.slice(1)}s${ANSI.reset}`,
+    );
     for (const change of categoryChanges) {
       lines.push(formatChangeTerminal(change));
     }

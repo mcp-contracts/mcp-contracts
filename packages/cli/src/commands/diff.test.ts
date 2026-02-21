@@ -1,7 +1,7 @@
 import { readFileSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Command } from "commander";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDiffCommand } from "./diff.js";
 
 const FIXTURES_DIR = resolve(import.meta.dirname, "../../../core/src/__fixtures__");
@@ -80,8 +80,15 @@ describe("diff command", () => {
     const program = createProgram();
     try {
       await program.parseAsync([
-        "node", "mcpdiff", "diff", V1, V2_WARNING,
-        "--fail-on", "warning", "--format", "json",
+        "node",
+        "mcpdiff",
+        "diff",
+        V1,
+        V2_WARNING,
+        "--fail-on",
+        "warning",
+        "--format",
+        "json",
       ]);
     } catch {
       // expected process.exit
@@ -92,8 +99,15 @@ describe("diff command", () => {
   it("--severity warning filters out safe changes from output", async () => {
     const program = createProgram();
     await program.parseAsync([
-      "node", "mcpdiff", "diff", V1, V2_SAFE,
-      "--severity", "warning", "--format", "json",
+      "node",
+      "mcpdiff",
+      "diff",
+      V1,
+      V2_SAFE,
+      "--severity",
+      "warning",
+      "--format",
+      "json",
     ]);
     const output = JSON.parse(stdoutData);
     expect(output.changes).toHaveLength(0);
@@ -116,7 +130,17 @@ describe("diff command", () => {
   it("writes to file with --output", async () => {
     const outPath = resolve(import.meta.dirname, "__tmp_diff_output.json");
     const program = createProgram();
-    await program.parseAsync(["node", "mcpdiff", "diff", V1, V1, "--format", "json", "-o", outPath]);
+    await program.parseAsync([
+      "node",
+      "mcpdiff",
+      "diff",
+      V1,
+      V1,
+      "--format",
+      "json",
+      "-o",
+      outPath,
+    ]);
     try {
       const content = readFileSync(outPath, "utf-8");
       const output = JSON.parse(content);
@@ -129,7 +153,15 @@ describe("diff command", () => {
   it("errors on invalid file path (exit 2)", async () => {
     const program = createProgram();
     try {
-      await program.parseAsync(["node", "mcpdiff", "diff", "/nonexistent.json", V1, "--format", "json"]);
+      await program.parseAsync([
+        "node",
+        "mcpdiff",
+        "diff",
+        "/nonexistent.json",
+        V1,
+        "--format",
+        "json",
+      ]);
     } catch {
       // expected process.exit
     }
@@ -140,7 +172,15 @@ describe("diff command", () => {
   it("produces terminal output", async () => {
     const program = createProgram();
     try {
-      await program.parseAsync(["node", "mcpdiff", "diff", V1, V2_BREAKING, "--format", "terminal"]);
+      await program.parseAsync([
+        "node",
+        "mcpdiff",
+        "diff",
+        V1,
+        V2_BREAKING,
+        "--format",
+        "terminal",
+      ]);
     } catch {
       // may exit 1
     }
@@ -150,7 +190,15 @@ describe("diff command", () => {
   it("produces markdown output", async () => {
     const program = createProgram();
     try {
-      await program.parseAsync(["node", "mcpdiff", "diff", V1, V2_BREAKING, "--format", "markdown"]);
+      await program.parseAsync([
+        "node",
+        "mcpdiff",
+        "diff",
+        V1,
+        V2_BREAKING,
+        "--format",
+        "markdown",
+      ]);
     } catch {
       // may exit 1
     }

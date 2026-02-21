@@ -1,6 +1,6 @@
-import { Command } from "commander";
-import Table from "cli-table3";
 import type { MCPContractSnapshot } from "@mcp-contracts/core";
+import Table from "cli-table3";
+import { Command } from "commander";
 import { handleErrors, readSnapshotFile, resolveFormat, stripAnsi, writeOutput } from "../utils.js";
 import type { OutputFormat } from "../utils.js";
 
@@ -13,14 +13,14 @@ import type { OutputFormat } from "../utils.js";
 function formatSummaryTerminal(snapshot: MCPContractSnapshot): string {
   const table = new Table();
   table.push(
-    { "Server": snapshot.server.name },
-    { "Version": snapshot.server.version },
-    { "Protocol": snapshot.server.protocolVersion },
+    { Server: snapshot.server.name },
+    { Version: snapshot.server.version },
+    { Protocol: snapshot.server.protocolVersion },
     { "Captured At": snapshot.capturedAt },
     { "Content Hash": snapshot.contentHash },
-    { "Tools": String(Object.keys(snapshot.tools).length) },
-    { "Resources": String(Object.keys(snapshot.resources).length) },
-    { "Prompts": String(Object.keys(snapshot.prompts).length) },
+    { Tools: String(Object.keys(snapshot.tools).length) },
+    { Resources: String(Object.keys(snapshot.resources).length) },
+    { Prompts: String(Object.keys(snapshot.prompts).length) },
   );
   return table.toString();
 }
@@ -129,7 +129,9 @@ function formatResources(snapshot: MCPContractSnapshot, format: OutputFormat): s
   if (format === "markdown") {
     const lines = ["| URI | Description | MIME Type | Template |", "| --- | --- | --- | --- |"];
     for (const [uri, res] of resources) {
-      lines.push(`| ${uri} | ${res.description} | ${res.mimeType ?? ""} | ${res.isTemplate ? "Yes" : "No"} |`);
+      lines.push(
+        `| ${uri} | ${res.description} | ${res.mimeType ?? ""} | ${res.isTemplate ? "Yes" : "No"} |`,
+      );
     }
     return lines.join("\n");
   }
@@ -207,7 +209,9 @@ export function createInspectCommand(): Command {
           const toolName = options.schema as string;
           const tool = snapshot.tools[toolName];
           if (!tool) {
-            throw new Error(`Tool "${toolName}" not found in snapshot. Available tools: ${Object.keys(snapshot.tools).join(", ")}`);
+            throw new Error(
+              `Tool "${toolName}" not found in snapshot. Available tools: ${Object.keys(snapshot.tools).join(", ")}`,
+            );
           }
           output = JSON.stringify(tool.inputSchema, null, 2);
         } else if (options.tools) {

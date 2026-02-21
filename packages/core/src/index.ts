@@ -42,7 +42,12 @@ export type {
 } from "./snapshot.js";
 
 // Functions — uncomment as implemented:
-export { createSnapshot, normalizeTools, normalizeResources, normalizePrompts } from "./snapshot.js";
+export {
+  createSnapshot,
+  normalizeTools,
+  normalizeResources,
+  normalizePrompts,
+} from "./snapshot.js";
 export { computeContentHash, sortKeys } from "./hash.js";
 export { diffSnapshots } from "./diff.js";
 export { formatTerminal, formatMarkdown, formatJson } from "./format.js";

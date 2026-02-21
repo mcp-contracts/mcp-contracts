@@ -1,12 +1,6 @@
-import type {
-  DiffOptions,
-  DiffReport,
-  DiffSummary,
-  SchemaChange,
-  Severity,
-} from "./diff-types.js";
-import { SEVERITY_ORDER } from "./diff-types.js";
 import { diffOutputSchema, diffSchemas } from "./diff-schema.js";
+import type { DiffOptions, DiffReport, DiffSummary, SchemaChange, Severity } from "./diff-types.js";
+import { SEVERITY_ORDER } from "./diff-types.js";
 import type { MCPContractSnapshot } from "./types.js";
 
 /**
@@ -57,9 +51,7 @@ function buildSummary(changes: SchemaChange[]): DiffSummary {
  * @returns A new sorted array.
  */
 function sortChanges(changes: SchemaChange[]): SchemaChange[] {
-  return [...changes].sort(
-    (a, b) => SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity],
-  );
+  return [...changes].sort((a, b) => SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity]);
 }
 
 /**
@@ -69,10 +61,7 @@ function sortChanges(changes: SchemaChange[]): SchemaChange[] {
  * @param minSeverity - The minimum severity to include.
  * @returns Filtered list.
  */
-function filterBySeverity(
-  changes: SchemaChange[],
-  minSeverity: Severity,
-): SchemaChange[] {
+function filterBySeverity(changes: SchemaChange[], minSeverity: Severity): SchemaChange[] {
   const minOrder = SEVERITY_ORDER[minSeverity];
   return changes.filter((c) => SEVERITY_ORDER[c.severity] >= minOrder);
 }
@@ -84,10 +73,7 @@ function filterBySeverity(
  * @param after - The updated snapshot.
  * @returns List of tool-level changes.
  */
-function diffTools(
-  before: MCPContractSnapshot,
-  after: MCPContractSnapshot,
-): SchemaChange[] {
+function diffTools(before: MCPContractSnapshot, after: MCPContractSnapshot): SchemaChange[] {
   const changes: SchemaChange[] = [];
   const beforeNames = new Set(Object.keys(before.tools));
   const afterNames = new Set(Object.keys(after.tools));
@@ -123,8 +109,9 @@ function diffTools(
   // Modified tools (present in both)
   for (const name of beforeNames) {
     if (!afterNames.has(name)) continue;
-    const beforeTool = before.tools[name]!;
-    const afterTool = after.tools[name]!;
+    const beforeTool = before.tools[name];
+    const afterTool = after.tools[name];
+    if (!beforeTool || !afterTool) continue;
 
     if (beforeTool.description !== afterTool.description) {
       changes.push({
@@ -146,9 +133,7 @@ function diffTools(
     );
 
     // Output schema changes
-    changes.push(
-      ...diffOutputSchema(name, beforeTool.outputSchema, afterTool.outputSchema),
-    );
+    changes.push(...diffOutputSchema(name, beforeTool.outputSchema, afterTool.outputSchema));
   }
 
   return changes;
@@ -161,10 +146,7 @@ function diffTools(
  * @param after - The updated snapshot.
  * @returns List of resource-level changes.
  */
-function diffResources(
-  before: MCPContractSnapshot,
-  after: MCPContractSnapshot,
-): SchemaChange[] {
+function diffResources(before: MCPContractSnapshot, after: MCPContractSnapshot): SchemaChange[] {
   const changes: SchemaChange[] = [];
   const beforeKeys = new Set(Object.keys(before.resources));
   const afterKeys = new Set(Object.keys(after.resources));
@@ -197,8 +179,9 @@ function diffResources(
 
   for (const uri of beforeKeys) {
     if (!afterKeys.has(uri)) continue;
-    const beforeRes = before.resources[uri]!;
-    const afterRes = after.resources[uri]!;
+    const beforeRes = before.resources[uri];
+    const afterRes = after.resources[uri];
+    if (!beforeRes || !afterRes) continue;
 
     if (beforeRes.description !== afterRes.description) {
       changes.push({
@@ -233,16 +216,85 @@ function diffResources(
 }
 
 /**
+ * Detects modifications to a single prompt present in both snapshots.
+ *
+ * @param name - The prompt name.
+ * @param beforePrompt - The old prompt contract.
+ * @param afterPrompt - The new prompt contract.
+ * @returns List of changes for this prompt.
+ */
+function diffPromptModifications(
+  name: string,
+  beforePrompt: {
+    description?: string;
+    arguments: Array<{ name: string; description?: string; required?: boolean }>;
+  },
+  afterPrompt: {
+    description?: string;
+    arguments: Array<{ name: string; description?: string; required?: boolean }>;
+  },
+): SchemaChange[] {
+  const changes: SchemaChange[] = [];
+
+  if (beforePrompt.description !== afterPrompt.description) {
+    changes.push({
+      id: `prompt.${name}.description`,
+      category: "prompt",
+      name,
+      severity: "warning",
+      type: "modified",
+      message: `Prompt "${name}" description changed`,
+      path: "description",
+      before: beforePrompt.description,
+      after: afterPrompt.description,
+    });
+  }
+
+  const beforeArgs = new Map(beforePrompt.arguments.map((a) => [a.name, a]));
+  const afterArgs = new Map(afterPrompt.arguments.map((a) => [a.name, a]));
+
+  for (const [argName, arg] of afterArgs) {
+    if (beforeArgs.has(argName)) continue;
+    const isRequired = arg.required === true;
+    changes.push({
+      id: `prompt.${name}.argument.${argName}.added`,
+      category: "prompt",
+      name,
+      severity: isRequired ? "breaking" : "safe",
+      type: "added",
+      message: isRequired
+        ? `Required argument "${argName}" added to prompt "${name}"`
+        : `Optional argument "${argName}" added to prompt "${name}"`,
+      path: `arguments.${argName}`,
+      after: arg,
+    });
+  }
+
+  for (const [argName, arg] of beforeArgs) {
+    if (afterArgs.has(argName)) continue;
+    changes.push({
+      id: `prompt.${name}.argument.${argName}.removed`,
+      category: "prompt",
+      name,
+      severity: "warning",
+      type: "removed",
+      message: `Argument "${argName}" removed from prompt "${name}"`,
+      path: `arguments.${argName}`,
+      before: arg,
+    });
+  }
+
+  return changes;
+}
+
+/**
  * Detects prompt-level changes between two snapshots.
  *
  * @param before - The baseline snapshot.
  * @param after - The updated snapshot.
  * @returns List of prompt-level changes.
  */
-function diffPrompts(
-  before: MCPContractSnapshot,
-  after: MCPContractSnapshot,
-): SchemaChange[] {
+function diffPrompts(before: MCPContractSnapshot, after: MCPContractSnapshot): SchemaChange[] {
   const changes: SchemaChange[] = [];
   const beforeNames = new Set(Object.keys(before.prompts));
   const afterNames = new Set(Object.keys(after.prompts));
@@ -275,59 +327,10 @@ function diffPrompts(
 
   for (const name of beforeNames) {
     if (!afterNames.has(name)) continue;
-    const beforePrompt = before.prompts[name]!;
-    const afterPrompt = after.prompts[name]!;
-
-    if (beforePrompt.description !== afterPrompt.description) {
-      changes.push({
-        id: `prompt.${name}.description`,
-        category: "prompt",
-        name,
-        severity: "warning",
-        type: "modified",
-        message: `Prompt "${name}" description changed`,
-        path: "description",
-        before: beforePrompt.description,
-        after: afterPrompt.description,
-      });
-    }
-
-    // Argument changes
-    const beforeArgs = new Map(beforePrompt.arguments.map((a) => [a.name, a]));
-    const afterArgs = new Map(afterPrompt.arguments.map((a) => [a.name, a]));
-
-    for (const [argName, arg] of afterArgs) {
-      if (!beforeArgs.has(argName)) {
-        const isRequired = arg.required === true;
-        changes.push({
-          id: `prompt.${name}.argument.${argName}.added`,
-          category: "prompt",
-          name,
-          severity: isRequired ? "breaking" : "safe",
-          type: "added",
-          message: isRequired
-            ? `Required argument "${argName}" added to prompt "${name}"`
-            : `Optional argument "${argName}" added to prompt "${name}"`,
-          path: `arguments.${argName}`,
-          after: arg,
-        });
-      }
-    }
-
-    for (const [argName, arg] of beforeArgs) {
-      if (!afterArgs.has(argName)) {
-        changes.push({
-          id: `prompt.${name}.argument.${argName}.removed`,
-          category: "prompt",
-          name,
-          severity: "warning",
-          type: "removed",
-          message: `Argument "${argName}" removed from prompt "${name}"`,
-          path: `arguments.${argName}`,
-          before: arg,
-        });
-      }
-    }
+    const beforePrompt = before.prompts[name];
+    const afterPrompt = after.prompts[name];
+    if (!beforePrompt || !afterPrompt) continue;
+    changes.push(...diffPromptModifications(name, beforePrompt, afterPrompt));
   }
 
   return changes;

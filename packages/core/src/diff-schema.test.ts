@@ -25,7 +25,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const added = changes.find((c) => c.id.includes("email.added"));
     expect(added).toBeDefined();
-    expect(added!.severity).toBe("breaking");
+    expect(added?.severity).toBe("breaking");
   });
 
   it("detects required parameter removed as warning", () => {
@@ -46,7 +46,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const removed = changes.find((c) => c.id.includes("email.removed"));
     expect(removed).toBeDefined();
-    expect(removed!.severity).toBe("warning");
+    expect(removed?.severity).toBe("warning");
   });
 
   it("detects optional parameter added as safe", () => {
@@ -67,7 +67,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const added = changes.find((c) => c.id.includes("nickname.added"));
     expect(added).toBeDefined();
-    expect(added!.severity).toBe("safe");
+    expect(added?.severity).toBe("safe");
   });
 
   it("detects optional parameter removed as warning", () => {
@@ -88,7 +88,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const removed = changes.find((c) => c.id.includes("nickname.removed"));
     expect(removed).toBeDefined();
-    expect(removed!.severity).toBe("warning");
+    expect(removed?.severity).toBe("warning");
   });
 
   it("detects parameter type changed as breaking", () => {
@@ -104,7 +104,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const typeChange = changes.find((c) => c.id.includes("typeChanged"));
     expect(typeChange).toBeDefined();
-    expect(typeChange!.severity).toBe("breaking");
+    expect(typeChange?.severity).toBe("breaking");
   });
 
   it("detects type widened as safe", () => {
@@ -120,7 +120,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const widened = changes.find((c) => c.id.includes("typeWidened"));
     expect(widened).toBeDefined();
-    expect(widened!.severity).toBe("safe");
+    expect(widened?.severity).toBe("safe");
   });
 
   it("detects type narrowed as breaking", () => {
@@ -136,7 +136,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const narrowed = changes.find((c) => c.id.includes("typeNarrowed"));
     expect(narrowed).toBeDefined();
-    expect(narrowed!.severity).toBe("breaking");
+    expect(narrowed?.severity).toBe("breaking");
   });
 
   it("detects enum values removed as breaking", () => {
@@ -152,7 +152,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const removed = changes.find((c) => c.id.includes("enumValuesRemoved"));
     expect(removed).toBeDefined();
-    expect(removed!.severity).toBe("breaking");
+    expect(removed?.severity).toBe("breaking");
   });
 
   it("detects enum values added as safe", () => {
@@ -168,7 +168,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const added = changes.find((c) => c.id.includes("enumValuesAdded"));
     expect(added).toBeDefined();
-    expect(added!.severity).toBe("safe");
+    expect(added?.severity).toBe("safe");
   });
 
   it("detects parameter description changed as warning", () => {
@@ -184,7 +184,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const desc = changes.find((c) => c.id.includes("descriptionChanged"));
     expect(desc).toBeDefined();
-    expect(desc!.severity).toBe("warning");
+    expect(desc?.severity).toBe("warning");
   });
 
   it("detects parameter default changed as warning", () => {
@@ -200,7 +200,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const def = changes.find((c) => c.id.includes("defaultChanged"));
     expect(def).toBeDefined();
-    expect(def!.severity).toBe("warning");
+    expect(def?.severity).toBe("warning");
   });
 
   it("detects format added as warning", () => {
@@ -216,7 +216,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const fmt = changes.find((c) => c.id.includes("formatChanged"));
     expect(fmt).toBeDefined();
-    expect(fmt!.severity).toBe("warning");
+    expect(fmt?.severity).toBe("warning");
   });
 
   it("detects format changed as warning", () => {
@@ -232,7 +232,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const fmt = changes.find((c) => c.id.includes("formatChanged"));
     expect(fmt).toBeDefined();
-    expect(fmt!.severity).toBe("warning");
+    expect(fmt?.severity).toBe("warning");
   });
 
   it("detects additionalProperties changed from true/unset to false as breaking", () => {
@@ -249,7 +249,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const ap = changes.find((c) => c.id.includes("additionalProperties"));
     expect(ap).toBeDefined();
-    expect(ap!.severity).toBe("breaking");
+    expect(ap?.severity).toBe("breaking");
   });
 
   it("detects additionalProperties changed from false to true/unset as safe", () => {
@@ -266,7 +266,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const ap = changes.find((c) => c.id.includes("additionalProperties"));
     expect(ap).toBeDefined();
-    expect(ap!.severity).toBe("safe");
+    expect(ap?.severity).toBe("safe");
   });
 
   it("detects minimum made stricter as breaking", () => {
@@ -282,7 +282,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const c = changes.find((c) => c.id.includes("minimumStricter"));
     expect(c).toBeDefined();
-    expect(c!.severity).toBe("breaking");
+    expect(c?.severity).toBe("breaking");
   });
 
   it("detects maximum made more lenient as safe", () => {
@@ -298,7 +298,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const c = changes.find((c) => c.id.includes("maximumLenient"));
     expect(c).toBeDefined();
-    expect(c!.severity).toBe("safe");
+    expect(c?.severity).toBe("safe");
   });
 
   it("detects maxLength made stricter as breaking", () => {
@@ -314,7 +314,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const c = changes.find((c) => c.id.includes("maxLengthStricter"));
     expect(c).toBeDefined();
-    expect(c!.severity).toBe("breaking");
+    expect(c?.severity).toBe("breaking");
   });
 
   it("detects minItems made more lenient as safe", () => {
@@ -330,7 +330,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const c = changes.find((c) => c.id.includes("minItemsLenient"));
     expect(c).toBeDefined();
-    expect(c!.severity).toBe("safe");
+    expect(c?.severity).toBe("safe");
   });
 
   it("recurses into nested object schemas", () => {
@@ -365,8 +365,8 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const zipAdded = changes.find((c) => c.id.includes("zip.added"));
     expect(zipAdded).toBeDefined();
-    expect(zipAdded!.severity).toBe("breaking");
-    expect(zipAdded!.path).toContain("address");
+    expect(zipAdded?.severity).toBe("breaking");
+    expect(zipAdded?.path).toContain("address");
   });
 
   it("detects parameter becoming required as breaking", () => {
@@ -390,7 +390,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const req = changes.find((c) => c.id.includes("requiredAdded"));
     expect(req).toBeDefined();
-    expect(req!.severity).toBe("breaking");
+    expect(req?.severity).toBe("breaking");
   });
 
   it("detects parameter becoming optional as warning", () => {
@@ -414,7 +414,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const req = changes.find((c) => c.id.includes("requiredRemoved"));
     expect(req).toBeDefined();
-    expect(req!.severity).toBe("warning");
+    expect(req?.severity).toBe("warning");
   });
 
   it("reports no changes for identical schemas", () => {
@@ -472,7 +472,7 @@ describe("diffOutputSchema", () => {
     const changes = diffOutputSchema("testTool", before, after);
     const added = changes.find((c) => c.id.includes("status.added"));
     expect(added).toBeDefined();
-    expect(added!.severity).toBe("warning");
+    expect(added?.severity).toBe("warning");
   });
 
   it("detects required output field removed as breaking", () => {
@@ -492,7 +492,7 @@ describe("diffOutputSchema", () => {
     const changes = diffOutputSchema("testTool", before, after);
     const removed = changes.find((c) => c.id.includes("status.removed"));
     expect(removed).toBeDefined();
-    expect(removed!.severity).toBe("breaking");
+    expect(removed?.severity).toBe("breaking");
   });
 
   it("detects output field type changed as breaking", () => {
@@ -507,7 +507,7 @@ describe("diffOutputSchema", () => {
     const changes = diffOutputSchema("testTool", before, after);
     const typeChange = changes.find((c) => c.id.includes("typeChanged"));
     expect(typeChange).toBeDefined();
-    expect(typeChange!.severity).toBe("breaking");
+    expect(typeChange?.severity).toBe("breaking");
   });
 
   it("reports no changes when both are undefined", () => {

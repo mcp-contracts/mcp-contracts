@@ -1,5 +1,5 @@
-import { resolve } from "node:path";
 import { unlinkSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { readMcpConfig } from "./mcp-client.js";
 
@@ -84,7 +84,9 @@ describe("readMcpConfig", () => {
   });
 
   it("errors when config file does not exist", () => {
-    expect(() => readMcpConfig("/nonexistent/mcp.json", undefined)).toThrow("Failed to read config file");
+    expect(() => readMcpConfig("/nonexistent/mcp.json", undefined)).toThrow(
+      "Failed to read config file",
+    );
   });
 
   it("errors when config has invalid JSON", () => {

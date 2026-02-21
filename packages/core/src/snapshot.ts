@@ -1,5 +1,6 @@
 import { computeContentHash } from "./hash.js";
 import type {
+  JSONSchema,
   MCPContractSnapshot,
   PromptArgument,
   PromptContract,
@@ -7,7 +8,6 @@ import type {
   SnapshotCapture,
   SnapshotServer,
   ToolContract,
-  JSONSchema,
 } from "./types.js";
 import { SNAPSHOT_VERSION } from "./types.js";
 
@@ -136,9 +136,7 @@ export function normalizeResources(
  * @param prompts - Raw prompt definitions from prompts/list.
  * @returns Record keyed by prompt name.
  */
-export function normalizePrompts(
-  prompts: RawPrompt[],
-): Record<string, PromptContract> {
+export function normalizePrompts(prompts: RawPrompt[]): Record<string, PromptContract> {
   const result: Record<string, PromptContract> = {};
   for (const prompt of prompts) {
     const args: PromptArgument[] = (prompt.arguments ?? []).map((arg) => {

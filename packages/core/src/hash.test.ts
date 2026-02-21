@@ -26,7 +26,10 @@ describe("sortKeys", () => {
   });
 
   it("handles arrays by sorting keys within each element", () => {
-    const input = [{ z: 1, a: 2 }, { b: 3, a: 4 }];
+    const input = [
+      { z: 1, a: 2 },
+      { b: 3, a: 4 },
+    ];
     const result = sortKeys(input) as Array<Record<string, unknown>>;
     expect(Object.keys(result[0])).toEqual(["a", "z"]);
     expect(Object.keys(result[1])).toEqual(["a", "b"]);
@@ -134,9 +137,7 @@ describe("computeContentHash", () => {
     const prompts: Record<string, PromptContract> = {
       summarize_contact: {
         description: "Summarize a contact's information",
-        arguments: [
-          { name: "contactId", description: "ID of the contact", required: true },
-        ],
+        arguments: [{ name: "contactId", description: "ID of the contact", required: true }],
       },
     };
 

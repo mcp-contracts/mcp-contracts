@@ -102,7 +102,11 @@ server.tool(
     content: [
       {
         type: "text",
-        text: JSON.stringify({ id, deleted: confirm, timestamp: new Date().toISOString() }, null, 2),
+        text: JSON.stringify(
+          { id, deleted: confirm, timestamp: new Date().toISOString() },
+          null,
+          2,
+        ),
       },
     ],
   }),
@@ -114,14 +118,21 @@ server.tool(
   {
     id: z.string().describe("The contact's unique identifier"),
     name: z.string().optional().describe("Updated full name"),
-    email: z.union([z.string().email(), z.string().url()]).optional().describe("Updated email or profile URL"),
+    email: z
+      .union([z.string().email(), z.string().url()])
+      .optional()
+      .describe("Updated email or profile URL"),
     company: z.string().optional().describe("Updated company name"),
   },
   async ({ id, ...updates }) => ({
     content: [
       {
         type: "text",
-        text: JSON.stringify({ id, updated: Object.keys(updates), timestamp: new Date().toISOString() }, null, 2),
+        text: JSON.stringify(
+          { id, updated: Object.keys(updates), timestamp: new Date().toISOString() },
+          null,
+          2,
+        ),
       },
     ],
   }),

@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import { computeContentHash } from "./hash.js";
 import {
-  createSnapshot,
-  normalizePrompts,
-  normalizeResources,
-  normalizeTools,
   type CreateSnapshotParams,
   type RawPrompt,
   type RawResource,
   type RawResourceTemplate,
   type RawTool,
+  createSnapshot,
+  normalizePrompts,
+  normalizeResources,
+  normalizeTools,
 } from "./snapshot.js";
 
 const minimalServer = {
@@ -36,7 +36,11 @@ describe("normalizeTools", () => {
       {
         name: "create",
         description: "Create an item",
-        inputSchema: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
+        inputSchema: {
+          type: "object",
+          properties: { name: { type: "string" } },
+          required: ["name"],
+        },
       },
     ];
 
@@ -51,9 +55,7 @@ describe("normalizeTools", () => {
   });
 
   it("defaults description to empty string when missing", () => {
-    const tools: RawTool[] = [
-      { name: "test", inputSchema: { type: "object" } },
-    ];
+    const tools: RawTool[] = [{ name: "test", inputSchema: { type: "object" } }];
     const result = normalizeTools(tools);
     expect(result.test.description).toBe("");
   });
@@ -89,7 +91,12 @@ describe("normalizeTools", () => {
 describe("normalizeResources", () => {
   it("converts resources and templates into a keyed record", () => {
     const resources: RawResource[] = [
-      { uri: "file:///data.json", name: "data", description: "Data file", mimeType: "application/json" },
+      {
+        uri: "file:///data.json",
+        name: "data",
+        description: "Data file",
+        mimeType: "application/json",
+      },
     ];
     const templates: RawResourceTemplate[] = [
       { uriTemplate: "file:///users/{id}", name: "user", description: "User by ID" },
@@ -154,9 +161,7 @@ describe("createSnapshot", () => {
   it("creates a snapshot from minimal tool list", () => {
     const params: CreateSnapshotParams = {
       server: minimalServer,
-      tools: [
-        { name: "ping", description: "Ping the server", inputSchema: { type: "object" } },
-      ],
+      tools: [{ name: "ping", description: "Ping the server", inputSchema: { type: "object" } }],
       resources: [],
       resourceTemplates: [],
       prompts: [],
@@ -185,7 +190,12 @@ describe("createSnapshot", () => {
         },
       ],
       resources: [
-        { uri: "data://items", name: "items", description: "All items", mimeType: "application/json" },
+        {
+          uri: "data://items",
+          name: "items",
+          description: "All items",
+          mimeType: "application/json",
+        },
       ],
       resourceTemplates: [
         { uriTemplate: "data://items/{id}", name: "item", description: "Single item" },
@@ -213,9 +223,7 @@ describe("createSnapshot", () => {
   it("computes contentHash correctly", () => {
     const params: CreateSnapshotParams = {
       server: minimalServer,
-      tools: [
-        { name: "test", description: "Test tool", inputSchema: { type: "object" } },
-      ],
+      tools: [{ name: "test", description: "Test tool", inputSchema: { type: "object" } }],
       resources: [],
       resourceTemplates: [],
       prompts: [],

@@ -1,7 +1,7 @@
 import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { Command } from "commander";
+import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSnapshotCommand } from "./snapshot.js";
 
 vi.mock("./mcp-client.js", async (importOriginal) => {
@@ -79,7 +79,13 @@ describe("snapshot command", () => {
   it("produces valid snapshot JSON with --command", async () => {
     const program = createProgram();
     await program.parseAsync([
-      "node", "mcpdiff", "snapshot", "--command", "node", "--args", "server.js",
+      "node",
+      "mcpdiff",
+      "snapshot",
+      "--command",
+      "node",
+      "--args",
+      "server.js",
     ]);
     const snapshot = JSON.parse(stdoutData);
     expect(snapshot.snapshotVersion).toBe("1.0.0");
@@ -93,9 +99,7 @@ describe("snapshot command", () => {
 
   it("produces valid snapshot JSON with --url", async () => {
     const program = createProgram();
-    await program.parseAsync([
-      "node", "mcpdiff", "snapshot", "--url", "http://localhost:3000/mcp",
-    ]);
+    await program.parseAsync(["node", "mcpdiff", "snapshot", "--url", "http://localhost:3000/mcp"]);
     const snapshot = JSON.parse(stdoutData);
     expect(snapshot.capture.transport).toBe("streamable-http");
     expect(snapshot.capture.source).toBe("http://localhost:3000/mcp");
@@ -104,9 +108,7 @@ describe("snapshot command", () => {
   it("writes to file with --output", async () => {
     const outPath = resolve(import.meta.dirname, "__tmp_snapshot_output.json");
     const program = createProgram();
-    await program.parseAsync([
-      "node", "mcpdiff", "snapshot", "--command", "node", "-o", outPath,
-    ]);
+    await program.parseAsync(["node", "mcpdiff", "snapshot", "--command", "node", "-o", outPath]);
     try {
       const content = readFileSync(outPath, "utf-8");
       const snapshot = JSON.parse(content);
@@ -118,18 +120,14 @@ describe("snapshot command", () => {
 
   it("shows progress messages to stderr", async () => {
     const program = createProgram();
-    await program.parseAsync([
-      "node", "mcpdiff", "snapshot", "--command", "node",
-    ]);
+    await program.parseAsync(["node", "mcpdiff", "snapshot", "--command", "node"]);
     expect(stderrData).toContain("Connecting to MCP server");
     expect(stderrData).toContain("Connected to test-server v1.0.0");
   });
 
   it("suppresses progress with --quiet", async () => {
     const program = createProgram();
-    await program.parseAsync([
-      "node", "mcpdiff", "snapshot", "--command", "node", "--quiet",
-    ]);
+    await program.parseAsync(["node", "mcpdiff", "snapshot", "--command", "node", "--quiet"]);
     expect(stderrData).toBe("");
   });
 
@@ -148,9 +146,13 @@ describe("snapshot command", () => {
     const program = createProgram();
     try {
       await program.parseAsync([
-        "node", "mcpdiff", "snapshot",
-        "--command", "node",
-        "--url", "http://localhost:3000/mcp",
+        "node",
+        "mcpdiff",
+        "snapshot",
+        "--command",
+        "node",
+        "--url",
+        "http://localhost:3000/mcp",
       ]);
     } catch {
       // expected process.exit
@@ -172,9 +174,7 @@ describe("snapshot command", () => {
     );
     try {
       const program = createProgram();
-      await program.parseAsync([
-        "node", "mcpdiff", "snapshot", "--config", configPath,
-      ]);
+      await program.parseAsync(["node", "mcpdiff", "snapshot", "--config", configPath]);
       const snapshot = JSON.parse(stdoutData);
       expect(snapshot.snapshotVersion).toBe("1.0.0");
     } finally {
@@ -186,7 +186,11 @@ describe("snapshot command", () => {
     const program = createProgram();
     try {
       await program.parseAsync([
-        "node", "mcpdiff", "snapshot", "--config", "/nonexistent/mcp.json",
+        "node",
+        "mcpdiff",
+        "snapshot",
+        "--config",
+        "/nonexistent/mcp.json",
       ]);
     } catch {
       // expected process.exit
@@ -199,9 +203,14 @@ describe("snapshot command", () => {
     const { connectToServer } = await import("./mcp-client.js");
     const program = createProgram();
     await program.parseAsync([
-      "node", "mcpdiff", "snapshot",
-      "--command", "node",
-      "--env", "API_KEY=secret", "DEBUG=true",
+      "node",
+      "mcpdiff",
+      "snapshot",
+      "--command",
+      "node",
+      "--env",
+      "API_KEY=secret",
+      "DEBUG=true",
     ]);
     expect(connectToServer).toHaveBeenCalledWith(
       expect.objectContaining({

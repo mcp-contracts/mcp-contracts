@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Command } from "commander";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createInspectCommand } from "./inspect.js";
 
 const FIXTURES_DIR = resolve(import.meta.dirname, "../../../core/src/__fixtures__");
@@ -70,7 +70,15 @@ describe("inspect command", () => {
 
   it("lists tools with --tools flag (json)", async () => {
     const program = createProgram();
-    await program.parseAsync(["node", "mcpdiff", "inspect", V1_PATH, "--tools", "--format", "json"]);
+    await program.parseAsync([
+      "node",
+      "mcpdiff",
+      "inspect",
+      V1_PATH,
+      "--tools",
+      "--format",
+      "json",
+    ]);
     const output = JSON.parse(stdoutData);
     expect(output).toHaveLength(3);
     const names = output.map((t: { name: string }) => t.name);
@@ -81,7 +89,15 @@ describe("inspect command", () => {
 
   it("lists tools with --tools flag (terminal)", async () => {
     const program = createProgram();
-    await program.parseAsync(["node", "mcpdiff", "inspect", V1_PATH, "--tools", "--format", "terminal"]);
+    await program.parseAsync([
+      "node",
+      "mcpdiff",
+      "inspect",
+      V1_PATH,
+      "--tools",
+      "--format",
+      "terminal",
+    ]);
     expect(stdoutData).toContain("create_contact");
     expect(stdoutData).toContain("search_contacts");
     expect(stdoutData).toContain("delete_contact");
@@ -89,7 +105,15 @@ describe("inspect command", () => {
 
   it("lists resources with --resources flag (json)", async () => {
     const program = createProgram();
-    await program.parseAsync(["node", "mcpdiff", "inspect", V1_PATH, "--resources", "--format", "json"]);
+    await program.parseAsync([
+      "node",
+      "mcpdiff",
+      "inspect",
+      V1_PATH,
+      "--resources",
+      "--format",
+      "json",
+    ]);
     const output = JSON.parse(stdoutData);
     expect(output).toHaveLength(1);
     expect(output[0].uri).toBe("contacts://list");
@@ -98,7 +122,15 @@ describe("inspect command", () => {
 
   it("lists prompts with --prompts flag (json)", async () => {
     const program = createProgram();
-    await program.parseAsync(["node", "mcpdiff", "inspect", V1_PATH, "--prompts", "--format", "json"]);
+    await program.parseAsync([
+      "node",
+      "mcpdiff",
+      "inspect",
+      V1_PATH,
+      "--prompts",
+      "--format",
+      "json",
+    ]);
     const output = JSON.parse(stdoutData);
     expect(output).toHaveLength(1);
     expect(output[0].name).toBe("summarize_contact");
@@ -106,7 +138,16 @@ describe("inspect command", () => {
 
   it("shows schema for a specific tool with --schema", async () => {
     const program = createProgram();
-    await program.parseAsync(["node", "mcpdiff", "inspect", V1_PATH, "--schema", "create_contact", "--format", "json"]);
+    await program.parseAsync([
+      "node",
+      "mcpdiff",
+      "inspect",
+      V1_PATH,
+      "--schema",
+      "create_contact",
+      "--format",
+      "json",
+    ]);
     const schema = JSON.parse(stdoutData);
     expect(schema.type).toBe("object");
     expect(schema.properties.name).toBeDefined();
@@ -117,7 +158,16 @@ describe("inspect command", () => {
   it("errors on nonexistent tool with --schema", async () => {
     const program = createProgram();
     try {
-      await program.parseAsync(["node", "mcpdiff", "inspect", V1_PATH, "--schema", "nonexistent", "--format", "json"]);
+      await program.parseAsync([
+        "node",
+        "mcpdiff",
+        "inspect",
+        V1_PATH,
+        "--schema",
+        "nonexistent",
+        "--format",
+        "json",
+      ]);
     } catch {
       // expected process.exit
     }
@@ -128,7 +178,14 @@ describe("inspect command", () => {
   it("errors on invalid file path", async () => {
     const program = createProgram();
     try {
-      await program.parseAsync(["node", "mcpdiff", "inspect", "/nonexistent/path.json", "--format", "json"]);
+      await program.parseAsync([
+        "node",
+        "mcpdiff",
+        "inspect",
+        "/nonexistent/path.json",
+        "--format",
+        "json",
+      ]);
     } catch {
       // expected process.exit
     }

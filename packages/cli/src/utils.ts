@@ -61,7 +61,9 @@ export function readSnapshotFile(filePath: string): MCPContractSnapshot {
   }
 
   if (typeof obj.contentHash !== "string" || !obj.contentHash.startsWith("sha256:")) {
-    throw new Error(`Snapshot file "${filePath}" has invalid "contentHash" (expected "sha256:..." format)`);
+    throw new Error(
+      `Snapshot file "${filePath}" has invalid "contentHash" (expected "sha256:..." format)`,
+    );
   }
 
   return data as MCPContractSnapshot;
@@ -101,6 +103,7 @@ export function writeOutput(content: string, outputPath: string | undefined): vo
  * @returns The string with ANSI codes removed.
  */
 export function stripAnsi(str: string): string {
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI escape sequence matching
   return str.replace(/\x1b\[[0-9;]*m/g, "");
 }
 

@@ -1,13 +1,13 @@
 import { readFileSync } from "node:fs";
+import type { RawPrompt, RawResource, RawResourceTemplate, RawTool } from "@mcp-contracts/core";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import {
   StdioClientTransport,
   getDefaultEnvironment,
 } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import type { RawPrompt, RawResource, RawResourceTemplate, RawTool } from "@mcp-contracts/core";
+import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
 
 /** Resolved transport configuration for connecting to an MCP server. */
 export interface ResolvedTransport {
@@ -65,11 +65,119 @@ export async function connectToServer(config: ResolvedTransport): Promise<Connec
 }
 
 /**
+ * Warns to stderr on partial capture failures.
+ *
+ * @param label - What was being listed (e.g., "tools").
+ * @param err - The caught error.
+ */
+function warnCapture(label: string, err: unknown): void {
+  const message = err instanceof Error ? err.message : String(err);
+  process.stderr.write(`Warning: Failed to list ${label}: ${message}\n`);
+}
+
+/**
+ * Lists all tools from the server, paginating through results.
+ *
+ * @param client - The connected MCP client.
+ * @returns Array of raw tool data.
+ */
+async function listAllTools(client: Client): Promise<RawTool[]> {
+  const tools: RawTool[] = [];
+  let cursor: string | undefined;
+  do {
+    const result = await client.listTools(cursor ? { cursor } : undefined);
+    for (const tool of result.tools) {
+      tools.push({
+        name: tool.name,
+        description: tool.description,
+        inputSchema: tool.inputSchema as RawTool["inputSchema"],
+        ...(tool.outputSchema && {
+          outputSchema: tool.outputSchema as Record<string, unknown>,
+        }),
+        ...(tool.annotations && { annotations: tool.annotations as Record<string, unknown> }),
+      });
+    }
+    cursor = result.nextCursor;
+  } while (cursor);
+  return tools;
+}
+
+/**
+ * Lists all resources from the server, paginating through results.
+ *
+ * @param client - The connected MCP client.
+ * @returns Array of raw resource data.
+ */
+async function listAllResources(client: Client): Promise<RawResource[]> {
+  const resources: RawResource[] = [];
+  let cursor: string | undefined;
+  do {
+    const result = await client.listResources(cursor ? { cursor } : undefined);
+    for (const resource of result.resources) {
+      resources.push({
+        uri: resource.uri,
+        name: resource.name,
+        description: resource.description,
+        mimeType: resource.mimeType,
+      });
+    }
+    cursor = result.nextCursor;
+  } while (cursor);
+  return resources;
+}
+
+/**
+ * Lists all resource templates from the server, paginating through results.
+ *
+ * @param client - The connected MCP client.
+ * @returns Array of raw resource template data.
+ */
+async function listAllResourceTemplates(client: Client): Promise<RawResourceTemplate[]> {
+  const templates: RawResourceTemplate[] = [];
+  let cursor: string | undefined;
+  do {
+    const result = await client.listResourceTemplates(cursor ? { cursor } : undefined);
+    for (const template of result.resourceTemplates) {
+      templates.push({
+        uriTemplate: template.uriTemplate,
+        name: template.name,
+        description: template.description,
+        mimeType: template.mimeType,
+      });
+    }
+    cursor = result.nextCursor;
+  } while (cursor);
+  return templates;
+}
+
+/**
+ * Lists all prompts from the server, paginating through results.
+ *
+ * @param client - The connected MCP client.
+ * @returns Array of raw prompt data.
+ */
+async function listAllPrompts(client: Client): Promise<RawPrompt[]> {
+  const prompts: RawPrompt[] = [];
+  let cursor: string | undefined;
+  do {
+    const result = await client.listPrompts(cursor ? { cursor } : undefined);
+    for (const prompt of result.prompts) {
+      prompts.push({
+        name: prompt.name,
+        description: prompt.description,
+        arguments: prompt.arguments,
+      });
+    }
+    cursor = result.nextCursor;
+  } while (cursor);
+  return prompts;
+}
+
+/**
  * Captures all available data from a connected MCP server.
  *
  * Lists tools, resources, resource templates, and prompts based on server capabilities.
  * Each list call is wrapped in try/catch to handle partial failures gracefully.
- * Handles pagination via nextCursor loop.
  *
  * @param client - The connected MCP client.
  * @returns All captured server data.
@@ -77,86 +185,37 @@ export async function connectToServer(config: ResolvedTransport): Promise<Connec
 export async function captureServerData(client: Client): Promise<CapturedData> {
   const capabilities = client.getServerCapabilities() ?? {};
 
-  const tools: RawTool[] = [];
-  const resources: RawResource[] = [];
-  const resourceTemplates: RawResourceTemplate[] = [];
-  const prompts: RawPrompt[] = [];
+  let tools: RawTool[] = [];
+  let resources: RawResource[] = [];
+  let resourceTemplates: RawResourceTemplate[] = [];
+  let prompts: RawPrompt[] = [];
 
   if (capabilities.tools) {
     try {
-      let cursor: string | undefined;
-      do {
-        const result = await client.listTools(cursor ? { cursor } : undefined);
-        for (const tool of result.tools) {
-          tools.push({
-            name: tool.name,
-            description: tool.description,
-            inputSchema: tool.inputSchema as RawTool["inputSchema"],
-            ...(tool.outputSchema && { outputSchema: tool.outputSchema as Record<string, unknown> }),
-            ...(tool.annotations && { annotations: tool.annotations as Record<string, unknown> }),
-          });
-        }
-        cursor = result.nextCursor;
-      } while (cursor);
+      tools = await listAllTools(client);
     } catch (err) {
-      process.stderr.write(`Warning: Failed to list tools: ${err instanceof Error ? err.message : String(err)}\n`);
+      warnCapture("tools", err);
     }
   }
 
   if (capabilities.resources) {
     try {
-      let cursor: string | undefined;
-      do {
-        const result = await client.listResources(cursor ? { cursor } : undefined);
-        for (const resource of result.resources) {
-          resources.push({
-            uri: resource.uri,
-            name: resource.name,
-            description: resource.description,
-            mimeType: resource.mimeType,
-          });
-        }
-        cursor = result.nextCursor;
-      } while (cursor);
+      resources = await listAllResources(client);
     } catch (err) {
-      process.stderr.write(`Warning: Failed to list resources: ${err instanceof Error ? err.message : String(err)}\n`);
+      warnCapture("resources", err);
     }
-
     try {
-      let cursor: string | undefined;
-      do {
-        const result = await client.listResourceTemplates(cursor ? { cursor } : undefined);
-        for (const template of result.resourceTemplates) {
-          resourceTemplates.push({
-            uriTemplate: template.uriTemplate,
-            name: template.name,
-            description: template.description,
-            mimeType: template.mimeType,
-          });
-        }
-        cursor = result.nextCursor;
-      } while (cursor);
+      resourceTemplates = await listAllResourceTemplates(client);
     } catch (err) {
-      process.stderr.write(`Warning: Failed to list resource templates: ${err instanceof Error ? err.message : String(err)}\n`);
+      warnCapture("resource templates", err);
     }
   }
 
   if (capabilities.prompts) {
     try {
-      let cursor: string | undefined;
-      do {
-        const result = await client.listPrompts(cursor ? { cursor } : undefined);
-        for (const prompt of result.prompts) {
-          prompts.push({
-            name: prompt.name,
-            description: prompt.description,
-            arguments: prompt.arguments,
-          });
-        }
-        cursor = result.nextCursor;
-      } while (cursor);
+      prompts = await listAllPrompts(client);
     } catch (err) {
-      process.stderr.write(`Warning: Failed to list prompts: ${err instanceof Error ? err.message : String(err)}\n`);
+      warnCapture("prompts", err);
     }
   }
 
@@ -181,7 +240,10 @@ interface McpServerConfig {
  * @param serverName - Optional server name to select.
  * @returns The resolved transport configuration.
  */
-export function readMcpConfig(configPath: string, serverName: string | undefined): ResolvedTransport {
+export function readMcpConfig(
+  configPath: string,
+  serverName: string | undefined,
+): ResolvedTransport {
   let raw: string;
   try {
     raw = readFileSync(configPath, "utf-8");
@@ -216,16 +278,23 @@ export function readMcpConfig(configPath: string, serverName: string | undefined
   let selectedName: string;
   if (serverName) {
     if (!servers[serverName]) {
-      throw new Error(`Server "${serverName}" not found in config. Available: ${serverNames.join(", ")}`);
+      throw new Error(
+        `Server "${serverName}" not found in config. Available: ${serverNames.join(", ")}`,
+      );
     }
     selectedName = serverName;
   } else if (serverNames.length === 1) {
-    selectedName = serverNames[0]!;
+    selectedName = serverNames[0] as string;
   } else {
-    throw new Error(`Multiple servers in config. Use --server to select one: ${serverNames.join(", ")}`);
+    throw new Error(
+      `Multiple servers in config. Use --server to select one: ${serverNames.join(", ")}`,
+    );
   }
 
-  const entry = servers[selectedName]!;
+  const entry = servers[selectedName];
+  if (!entry) {
+    throw new Error(`Server "${selectedName}" not found in config`);
+  }
 
   if (entry.url) {
     return { transport: "streamable-http", url: entry.url };

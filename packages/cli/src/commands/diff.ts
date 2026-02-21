@@ -1,4 +1,3 @@
-import { Command } from "commander";
 import {
   SEVERITY_ORDER,
   diffSnapshots,
@@ -7,7 +6,15 @@ import {
   formatTerminal,
 } from "@mcp-contracts/core";
 import type { Severity } from "@mcp-contracts/core";
-import { CliExitError, handleErrors, readSnapshotFile, resolveFormat, stripAnsi, writeOutput } from "../utils.js";
+import { Command } from "commander";
+import {
+  CliExitError,
+  handleErrors,
+  readSnapshotFile,
+  resolveFormat,
+  stripAnsi,
+  writeOutput,
+} from "../utils.js";
 
 const VALID_SEVERITIES = new Set<string>(["safe", "warning", "breaking"]);
 
@@ -38,46 +45,48 @@ export function createDiffCommand(): Command {
     .option("--severity <level>", "Minimum severity to display: safe | warning | breaking", "safe")
     .option("--fail-on <level>", "Exit code 1 threshold: safe | warning | breaking", "breaking")
     .action(
-      handleErrors(async (beforePath: string, afterPath: string, options: Record<string, unknown>) => {
-        const severity = parseSeverity(options.severity as string, "--severity");
-        const failOn = parseSeverity(options.failOn as string, "--fail-on");
+      handleErrors(
+        async (beforePath: string, afterPath: string, options: Record<string, unknown>) => {
+          const severity = parseSeverity(options.severity as string, "--severity");
+          const failOn = parseSeverity(options.failOn as string, "--fail-on");
 
-        const before = readSnapshotFile(beforePath);
-        const after = readSnapshotFile(afterPath);
+          const before = readSnapshotFile(beforePath);
+          const after = readSnapshotFile(afterPath);
 
-        const parentOpts = cmd.parent?.opts() ?? {};
-        const format = resolveFormat(parentOpts.format as string | undefined);
-        const noColor = parentOpts.color === false;
-        const outputPath = parentOpts.output as string | undefined;
+          const parentOpts = cmd.parent?.opts() ?? {};
+          const format = resolveFormat(parentOpts.format as string | undefined);
+          const noColor = parentOpts.color === false;
+          const outputPath = parentOpts.output as string | undefined;
 
-        const report = diffSnapshots(before, after, { minSeverity: severity });
+          const report = diffSnapshots(before, after, { minSeverity: severity });
 
-        let output: string;
-        if (format === "json") {
-          output = formatJson(report);
-        } else if (format === "markdown") {
-          output = formatMarkdown(report);
-        } else {
-          output = formatTerminal(report);
-        }
+          let output: string;
+          if (format === "json") {
+            output = formatJson(report);
+          } else if (format === "markdown") {
+            output = formatMarkdown(report);
+          } else {
+            output = formatTerminal(report);
+          }
 
-        if (noColor && format === "terminal") {
-          output = stripAnsi(output);
-        }
+          if (noColor && format === "terminal") {
+            output = stripAnsi(output);
+          }
 
-        writeOutput(`${output}\n`, outputPath);
+          writeOutput(`${output}\n`, outputPath);
 
-        // Determine exit code using unfiltered diff
-        const fullReport = diffSnapshots(before, after);
-        const failThreshold = SEVERITY_ORDER[failOn];
-        const hasFailure = fullReport.changes.some(
-          (c) => SEVERITY_ORDER[c.severity] >= failThreshold,
-        );
+          // Determine exit code using unfiltered diff
+          const fullReport = diffSnapshots(before, after);
+          const failThreshold = SEVERITY_ORDER[failOn];
+          const hasFailure = fullReport.changes.some(
+            (c) => SEVERITY_ORDER[c.severity] >= failThreshold,
+          );
 
-        if (hasFailure) {
-          throw new CliExitError(1);
-        }
-      }),
+          if (hasFailure) {
+            throw new CliExitError(1);
+          }
+        },
+      ),
     );
 
   return cmd;

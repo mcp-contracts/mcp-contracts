@@ -14,7 +14,9 @@ describe("readSnapshotFile", () => {
   });
 
   it("throws on missing file", () => {
-    expect(() => readSnapshotFile("/nonexistent/file.json")).toThrow("Failed to read snapshot file");
+    expect(() => readSnapshotFile("/nonexistent/file.json")).toThrow(
+      "Failed to read snapshot file",
+    );
   });
 
   it("throws on invalid JSON", () => {
