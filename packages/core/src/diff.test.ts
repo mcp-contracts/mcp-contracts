@@ -103,3 +103,163 @@ describe("diffSnapshots — tool-level changes", () => {
     expect(report.meta.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 });
+
+describe("diffSnapshots — resource changes", () => {
+  it("detects resource removed as breaking", () => {
+    const after: MCPContractSnapshot = { ...v1, resources: {} };
+    const report = diffSnapshots(v1, after);
+    const removed = report.changes.filter((c) => c.category === "resource" && c.type === "removed");
+    expect(removed).toHaveLength(1);
+    expect(removed[0].name).toBe("contacts://list");
+    expect(removed[0].severity).toBe("breaking");
+  });
+
+  it("detects resource added as safe", () => {
+    const after: MCPContractSnapshot = {
+      ...v1,
+      resources: {
+        ...v1.resources,
+        "contacts://search": { description: "Search endpoint", isTemplate: false },
+      },
+    };
+    const report = diffSnapshots(v1, after);
+    const added = report.changes.filter((c) => c.category === "resource" && c.type === "added");
+    expect(added).toHaveLength(1);
+    expect(added[0].severity).toBe("safe");
+  });
+
+  it("detects resource MIME type changed as warning", () => {
+    const after: MCPContractSnapshot = {
+      ...v1,
+      resources: {
+        "contacts://list": {
+          ...v1.resources["contacts://list"]!,
+          mimeType: "text/csv",
+        },
+      },
+    };
+    const report = diffSnapshots(v1, after);
+    const mimeChange = report.changes.filter((c) => c.category === "resource" && c.path === "mimeType");
+    expect(mimeChange).toHaveLength(1);
+    expect(mimeChange[0].severity).toBe("warning");
+  });
+
+  it("detects resource description changed as warning", () => {
+    const after: MCPContractSnapshot = {
+      ...v1,
+      resources: {
+        "contacts://list": {
+          ...v1.resources["contacts://list"]!,
+          description: "Updated list of all contacts",
+        },
+      },
+    };
+    const report = diffSnapshots(v1, after);
+    const descChange = report.changes.filter((c) => c.category === "resource" && c.path === "description");
+    expect(descChange).toHaveLength(1);
+    expect(descChange[0].severity).toBe("warning");
+  });
+});
+
+describe("diffSnapshots — prompt changes", () => {
+  it("detects prompt removed as breaking", () => {
+    const after: MCPContractSnapshot = { ...v1, prompts: {} };
+    const report = diffSnapshots(v1, after);
+    const removed = report.changes.filter((c) => c.category === "prompt" && c.type === "removed");
+    expect(removed).toHaveLength(1);
+    expect(removed[0].name).toBe("summarize_contact");
+    expect(removed[0].severity).toBe("breaking");
+  });
+
+  it("detects prompt added as safe", () => {
+    const after: MCPContractSnapshot = {
+      ...v1,
+      prompts: {
+        ...v1.prompts,
+        greet: { description: "Greet a user", arguments: [] },
+      },
+    };
+    const report = diffSnapshots(v1, after);
+    const added = report.changes.filter((c) => c.category === "prompt" && c.type === "added");
+    expect(added).toHaveLength(1);
+    expect(added[0].severity).toBe("safe");
+  });
+
+  it("detects required prompt argument added as breaking", () => {
+    const after: MCPContractSnapshot = {
+      ...v1,
+      prompts: {
+        summarize_contact: {
+          ...v1.prompts.summarize_contact!,
+          arguments: [
+            ...v1.prompts.summarize_contact!.arguments,
+            { name: "format", description: "Output format", required: true },
+          ],
+        },
+      },
+    };
+    const report = diffSnapshots(v1, after);
+    const argAdded = report.changes.filter((c) =>
+      c.category === "prompt" && c.id.includes("format.added"),
+    );
+    expect(argAdded).toHaveLength(1);
+    expect(argAdded[0].severity).toBe("breaking");
+  });
+
+  it("detects optional prompt argument added as safe", () => {
+    const after: MCPContractSnapshot = {
+      ...v1,
+      prompts: {
+        summarize_contact: {
+          ...v1.prompts.summarize_contact!,
+          arguments: [
+            ...v1.prompts.summarize_contact!.arguments,
+            { name: "verbose", description: "Include details" },
+          ],
+        },
+      },
+    };
+    const report = diffSnapshots(v1, after);
+    const argAdded = report.changes.filter((c) =>
+      c.category === "prompt" && c.id.includes("verbose.added"),
+    );
+    expect(argAdded).toHaveLength(1);
+    expect(argAdded[0].severity).toBe("safe");
+  });
+
+  it("detects prompt argument removed as warning", () => {
+    const after: MCPContractSnapshot = {
+      ...v1,
+      prompts: {
+        summarize_contact: {
+          ...v1.prompts.summarize_contact!,
+          arguments: [],
+        },
+      },
+    };
+    const report = diffSnapshots(v1, after);
+    const argRemoved = report.changes.filter((c) =>
+      c.category === "prompt" && c.id.includes("contactId.removed"),
+    );
+    expect(argRemoved).toHaveLength(1);
+    expect(argRemoved[0].severity).toBe("warning");
+  });
+
+  it("detects prompt description changed as warning", () => {
+    const after: MCPContractSnapshot = {
+      ...v1,
+      prompts: {
+        summarize_contact: {
+          ...v1.prompts.summarize_contact!,
+          description: "Generate a detailed summary of contact info",
+        },
+      },
+    };
+    const report = diffSnapshots(v1, after);
+    const descChange = report.changes.filter((c) =>
+      c.category === "prompt" && c.path === "description",
+    );
+    expect(descChange).toHaveLength(1);
+    expect(descChange[0].severity).toBe("warning");
+  });
+});

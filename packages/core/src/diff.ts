@@ -155,6 +155,185 @@ function diffTools(
 }
 
 /**
+ * Detects resource-level changes between two snapshots.
+ *
+ * @param before - The baseline snapshot.
+ * @param after - The updated snapshot.
+ * @returns List of resource-level changes.
+ */
+function diffResources(
+  before: MCPContractSnapshot,
+  after: MCPContractSnapshot,
+): SchemaChange[] {
+  const changes: SchemaChange[] = [];
+  const beforeKeys = new Set(Object.keys(before.resources));
+  const afterKeys = new Set(Object.keys(after.resources));
+
+  for (const uri of beforeKeys) {
+    if (!afterKeys.has(uri)) {
+      changes.push({
+        id: `resource.${uri}.removed`,
+        category: "resource",
+        name: uri,
+        severity: "breaking",
+        type: "removed",
+        message: `Resource "${uri}" was removed`,
+      });
+    }
+  }
+
+  for (const uri of afterKeys) {
+    if (!beforeKeys.has(uri)) {
+      changes.push({
+        id: `resource.${uri}.added`,
+        category: "resource",
+        name: uri,
+        severity: "safe",
+        type: "added",
+        message: `Resource "${uri}" was added`,
+      });
+    }
+  }
+
+  for (const uri of beforeKeys) {
+    if (!afterKeys.has(uri)) continue;
+    const beforeRes = before.resources[uri]!;
+    const afterRes = after.resources[uri]!;
+
+    if (beforeRes.description !== afterRes.description) {
+      changes.push({
+        id: `resource.${uri}.description`,
+        category: "resource",
+        name: uri,
+        severity: "warning",
+        type: "modified",
+        message: `Resource "${uri}" description changed`,
+        path: "description",
+        before: beforeRes.description,
+        after: afterRes.description,
+      });
+    }
+
+    if (beforeRes.mimeType !== afterRes.mimeType) {
+      changes.push({
+        id: `resource.${uri}.mimeType`,
+        category: "resource",
+        name: uri,
+        severity: "warning",
+        type: "modified",
+        message: `Resource "${uri}" MIME type changed from "${beforeRes.mimeType ?? "unset"}" to "${afterRes.mimeType ?? "unset"}"`,
+        path: "mimeType",
+        before: beforeRes.mimeType,
+        after: afterRes.mimeType,
+      });
+    }
+  }
+
+  return changes;
+}
+
+/**
+ * Detects prompt-level changes between two snapshots.
+ *
+ * @param before - The baseline snapshot.
+ * @param after - The updated snapshot.
+ * @returns List of prompt-level changes.
+ */
+function diffPrompts(
+  before: MCPContractSnapshot,
+  after: MCPContractSnapshot,
+): SchemaChange[] {
+  const changes: SchemaChange[] = [];
+  const beforeNames = new Set(Object.keys(before.prompts));
+  const afterNames = new Set(Object.keys(after.prompts));
+
+  for (const name of beforeNames) {
+    if (!afterNames.has(name)) {
+      changes.push({
+        id: `prompt.${name}.removed`,
+        category: "prompt",
+        name,
+        severity: "breaking",
+        type: "removed",
+        message: `Prompt "${name}" was removed`,
+      });
+    }
+  }
+
+  for (const name of afterNames) {
+    if (!beforeNames.has(name)) {
+      changes.push({
+        id: `prompt.${name}.added`,
+        category: "prompt",
+        name,
+        severity: "safe",
+        type: "added",
+        message: `Prompt "${name}" was added`,
+      });
+    }
+  }
+
+  for (const name of beforeNames) {
+    if (!afterNames.has(name)) continue;
+    const beforePrompt = before.prompts[name]!;
+    const afterPrompt = after.prompts[name]!;
+
+    if (beforePrompt.description !== afterPrompt.description) {
+      changes.push({
+        id: `prompt.${name}.description`,
+        category: "prompt",
+        name,
+        severity: "warning",
+        type: "modified",
+        message: `Prompt "${name}" description changed`,
+        path: "description",
+        before: beforePrompt.description,
+        after: afterPrompt.description,
+      });
+    }
+
+    // Argument changes
+    const beforeArgs = new Map(beforePrompt.arguments.map((a) => [a.name, a]));
+    const afterArgs = new Map(afterPrompt.arguments.map((a) => [a.name, a]));
+
+    for (const [argName, arg] of afterArgs) {
+      if (!beforeArgs.has(argName)) {
+        const isRequired = arg.required === true;
+        changes.push({
+          id: `prompt.${name}.argument.${argName}.added`,
+          category: "prompt",
+          name,
+          severity: isRequired ? "breaking" : "safe",
+          type: "added",
+          message: isRequired
+            ? `Required argument "${argName}" added to prompt "${name}"`
+            : `Optional argument "${argName}" added to prompt "${name}"`,
+          path: `arguments.${argName}`,
+          after: arg,
+        });
+      }
+    }
+
+    for (const [argName, arg] of beforeArgs) {
+      if (!afterArgs.has(argName)) {
+        changes.push({
+          id: `prompt.${name}.argument.${argName}.removed`,
+          category: "prompt",
+          name,
+          severity: "warning",
+          type: "removed",
+          message: `Argument "${argName}" removed from prompt "${name}"`,
+          path: `arguments.${argName}`,
+          before: arg,
+        });
+      }
+    }
+  }
+
+  return changes;
+}
+
+/**
  * Compares two MCP Contract Snapshots and returns a detailed diff report.
  *
  * @param before - The baseline snapshot.
@@ -171,6 +350,8 @@ export function diffSnapshots(
 
   let changes: SchemaChange[] = [
     ...diffTools(before, after),
+    ...diffResources(before, after),
+    ...diffPrompts(before, after),
   ];
 
   changes = sortChanges(changes);
