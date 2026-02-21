@@ -9,6 +9,7 @@
 import { Command } from "commander";
 import { createDiffCommand } from "./commands/diff.js";
 import { createInspectCommand } from "./commands/inspect.js";
+import { createSnapshotCommand } from "./commands/snapshot.js";
 
 const program = new Command();
 
@@ -24,5 +25,6 @@ program
 
 program.addCommand(createDiffCommand());
 program.addCommand(createInspectCommand());
+program.addCommand(createSnapshotCommand());
 
 program.parse();
