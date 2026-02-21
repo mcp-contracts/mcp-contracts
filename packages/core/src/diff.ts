@@ -6,6 +6,7 @@ import type {
   Severity,
 } from "./diff-types.js";
 import { SEVERITY_ORDER } from "./diff-types.js";
+import { diffOutputSchema, diffSchemas } from "./diff-schema.js";
 import type { MCPContractSnapshot } from "./types.js";
 
 /**
@@ -138,6 +139,16 @@ function diffTools(
         after: afterTool.description,
       });
     }
+
+    // Input schema changes
+    changes.push(
+      ...diffSchemas(name, beforeTool.inputSchema, afterTool.inputSchema, "inputSchema"),
+    );
+
+    // Output schema changes
+    changes.push(
+      ...diffOutputSchema(name, beforeTool.outputSchema, afterTool.outputSchema),
+    );
   }
 
   return changes;
