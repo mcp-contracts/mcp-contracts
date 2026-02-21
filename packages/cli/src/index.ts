@@ -7,24 +7,20 @@
  */
 
 import { Command } from "commander";
+import { createInspectCommand } from "./commands/inspect.js";
 
 const program = new Command();
 
 program
   .name("mcpdiff")
   .description("Capture, diff, and inspect MCP server tool schemas")
-  .version("0.1.0");
+  .version("0.1.0")
+  .option("--format <format>", "Output format: terminal | json | markdown")
+  .option("--no-color", "Disable colored output")
+  .option("-o, --output <path>", "Output file path")
+  .option("--quiet", "Suppress non-essential output")
+  .option("--verbose", "Show detailed information");
 
-// --- snapshot command ---
-// TODO: implement in ./commands/snapshot.ts
-// program.addCommand(snapshotCommand);
-
-// --- diff command ---
-// TODO: implement in ./commands/diff.ts
-// program.addCommand(diffCommand);
-
-// --- inspect command ---
-// TODO: implement in ./commands/inspect.ts
-// program.addCommand(inspectCommand);
+program.addCommand(createInspectCommand());
 
 program.parse();
