@@ -1,0 +1,43 @@
+name: Bug Report
+description: Report a bug in mcpdiff or @mcp-contracts/core
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to reproduce the issue.
+      placeholder: |
+        1. Run `mcpdiff snapshot --command "node server.js"`
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Node version, OS, package versions.
+      placeholder: |
+        - Node: v22.0.0
+        - OS: macOS 15
+        - @mcp-contracts/cli: 0.1.0
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: Paste any error messages or CLI output.
+      render: shell
+    validations:
+      required: false
