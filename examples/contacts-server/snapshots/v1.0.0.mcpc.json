@@ -1,0 +1,129 @@
+{
+  "snapshotVersion": "1.0.0",
+  "capturedAt": "2026-02-20T10:00:00.000Z",
+  "contentHash": "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+  "server": {
+    "name": "contacts-server",
+    "version": "1.0.0",
+    "protocolVersion": "2025-11-25",
+    "capabilities": {
+      "tools": {},
+      "resources": {}
+    }
+  },
+  "capture": {
+    "transport": "stdio",
+    "source": "node examples/contacts-server/v1/server.js",
+    "tool": "mcpdiff/0.1.0"
+  },
+  "tools": {
+    "create_contact": {
+      "description": "Create a new contact in the address book",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Full name of the contact"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address"
+          },
+          "company": {
+            "type": "string",
+            "description": "Company or organization name"
+          }
+        },
+        "required": ["name", "email"]
+      }
+    },
+    "get_contact": {
+      "description": "Retrieve a contact by their unique ID",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The contact's unique identifier (e.g., c_001)"
+          }
+        },
+        "required": ["id"]
+      }
+    },
+    "search_contacts": {
+      "description": "Search for contacts by name, email, or company",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query to match against contact fields"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of results",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    "delete_contact": {
+      "description": "Permanently delete a contact by ID",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The contact's unique identifier"
+          },
+          "confirm": {
+            "type": "boolean",
+            "description": "Must be true to confirm deletion"
+          }
+        },
+        "required": ["id", "confirm"]
+      }
+    },
+    "update_contact": {
+      "description": "Update fields on an existing contact",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The contact's unique identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Updated full name"
+          },
+          "email": {
+            "anyOf": [
+              { "type": "string", "format": "email" },
+              { "type": "string", "format": "uri" }
+            ],
+            "description": "Updated email or profile URL"
+          },
+          "company": {
+            "type": "string",
+            "description": "Updated company name"
+          }
+        },
+        "required": ["id"]
+      }
+    }
+  },
+  "resources": {
+    "contacts://stats": {
+      "description": "contacts://stats",
+      "mimeType": "application/json",
+      "isTemplate": false
+    }
+  },
+  "prompts": {}
+}

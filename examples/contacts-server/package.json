@@ -1,0 +1,10 @@
+{
+  "name": "mcp-contracts-examples",
+  "private": true,
+  "type": "module",
+  "description": "Example MCP servers for demonstrating mcpdiff",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^2.0.0",
+    "zod": "^3.24.0"
+  }
+}
