@@ -1,14 +1,18 @@
 {
   "snapshotVersion": "1.0.0",
-  "capturedAt": "2026-02-20T10:00:00.000Z",
-  "contentHash": "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+  "capturedAt": "2026-02-21T13:44:25.747Z",
+  "contentHash": "sha256:e5757aea2ca56fce704ebf6ef12974453d60891d4da3be5d06029efb5ed2d900",
   "server": {
     "name": "contacts-server",
     "version": "1.0.0",
     "protocolVersion": "2025-11-25",
     "capabilities": {
-      "tools": {},
-      "resources": {}
+      "resources": {
+        "listChanged": true
+      },
+      "tools": {
+        "listChanged": true
+      }
     }
   },
   "capture": {
@@ -36,7 +40,12 @@
             "description": "Company or organization name"
           }
         },
-        "required": ["name", "email"]
+        "required": [
+          "name",
+          "email"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     "get_contact": {
@@ -49,7 +58,11 @@
             "description": "The contact's unique identifier (e.g., c_001)"
           }
         },
-        "required": ["id"]
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     "search_contacts": {
@@ -62,14 +75,18 @@
             "description": "Search query to match against contact fields"
           },
           "limit": {
-            "type": "number",
-            "description": "Maximum number of results",
-            "default": 10,
+            "type": "integer",
             "minimum": 1,
-            "maximum": 100
+            "maximum": 100,
+            "default": 10,
+            "description": "Maximum number of results"
           }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     "delete_contact": {
@@ -86,7 +103,12 @@
             "description": "Must be true to confirm deletion"
           }
         },
-        "required": ["id", "confirm"]
+        "required": [
+          "id",
+          "confirm"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     "update_contact": {
@@ -104,8 +126,14 @@
           },
           "email": {
             "anyOf": [
-              { "type": "string", "format": "email" },
-              { "type": "string", "format": "uri" }
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "string",
+                "format": "uri"
+              }
             ],
             "description": "Updated email or profile URL"
           },
@@ -114,14 +142,17 @@
             "description": "Updated company name"
           }
         },
-        "required": ["id"]
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     }
   },
   "resources": {
     "contacts://stats": {
-      "description": "contacts://stats",
-      "mimeType": "application/json",
+      "description": "",
       "isTemplate": false
     }
   },

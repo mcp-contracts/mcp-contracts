@@ -1,14 +1,18 @@
 {
   "snapshotVersion": "1.0.0",
-  "capturedAt": "2026-02-21T10:00:00.000Z",
-  "contentHash": "sha256:f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5",
+  "capturedAt": "2026-02-21T13:44:26.706Z",
+  "contentHash": "sha256:5dc023b3fc8d65b8876128cae45731ef4df91ebe6a14514264fcdd066d637e51",
   "server": {
     "name": "contacts-server",
     "version": "2.0.0",
     "protocolVersion": "2025-11-25",
     "capabilities": {
-      "tools": {},
-      "resources": {}
+      "resources": {
+        "listChanged": true
+      },
+      "tools": {
+        "listChanged": true
+      }
     }
   },
   "capture": {
@@ -40,7 +44,13 @@
             "description": "Company or organization name"
           }
         },
-        "required": ["name", "email", "phone"]
+        "required": [
+          "name",
+          "email",
+          "phone"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     "get_contact": {
@@ -58,7 +68,11 @@
             "description": "Include private notes in response"
           }
         },
-        "required": ["id"]
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     "search_contacts": {
@@ -71,14 +85,18 @@
             "description": "Search query to match against contact fields"
           },
           "limit": {
-            "type": "number",
-            "description": "Maximum number of results",
-            "default": 10,
+            "type": "integer",
             "minimum": 1,
-            "maximum": 100
+            "maximum": 100,
+            "default": 10,
+            "description": "Maximum number of results"
           }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     "update_contact": {
@@ -104,7 +122,11 @@
             "description": "Updated company name"
           }
         },
-        "required": ["id"]
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     "export_contacts": {
@@ -114,7 +136,10 @@
         "properties": {
           "format": {
             "type": "string",
-            "enum": ["csv", "json"],
+            "enum": [
+              "csv",
+              "json"
+            ],
             "default": "json",
             "description": "Export format"
           },
@@ -124,14 +149,14 @@
             "description": "Include archived contacts"
           }
         },
-        "required": []
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     }
   },
   "resources": {
     "contacts://stats": {
-      "description": "contacts://stats",
-      "mimeType": "application/json",
+      "description": "",
       "isTemplate": false
     }
   },

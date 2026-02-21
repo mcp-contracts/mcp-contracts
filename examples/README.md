@@ -29,18 +29,19 @@ This runs an actual MCP server, captures snapshots, and diffs them.
 - Node.js >= 20
 - pnpm installed
 - Repo built (`pnpm -r build` from root)
+- Example server dependencies installed (`cd examples/contacts-server && npm install`)
 
 ### Steps
 
 ```bash
 # 1. Capture a snapshot of the v1 server
 node packages/cli/dist/index.js snapshot \
-  --command "node examples/contacts-server/v1/server.js" \
+  --command node --args examples/contacts-server/v1/server.js \
   -o /tmp/contacts-v1.mcpc.json
 
 # 2. Capture a snapshot of the v2 server (has breaking + warning changes)
 node packages/cli/dist/index.js snapshot \
-  --command "node examples/contacts-server/v2/server.js" \
+  --command node --args examples/contacts-server/v2/server.js \
   -o /tmp/contacts-v2.mcpc.json
 
 # 3. Diff them
