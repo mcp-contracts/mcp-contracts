@@ -1,0 +1,67 @@
+{
+  "snapshotVersion": "1.0.0",
+  "capturedAt": "2026-02-01T10:00:00.000Z",
+  "contentHash": "sha256:placeholder",
+  "server": {
+    "name": "contacts-server",
+    "version": "1.0.1",
+    "protocolVersion": "2025-03-26",
+    "capabilities": { "tools": {} }
+  },
+  "capture": {
+    "transport": "stdio",
+    "source": "node dist/index.js",
+    "tool": "mcpdiff/0.1.0"
+  },
+  "tools": {
+    "create_contact": {
+      "description": "Creates a new contact in the address book",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Full name of the contact" },
+          "email": { "type": "string", "format": "email", "description": "Email address" },
+          "phone": { "type": "string", "description": "Phone number" }
+        },
+        "required": ["name", "email"],
+        "additionalProperties": false
+      }
+    },
+    "search_contacts": {
+      "description": "Search through all contacts using a text query. You must always use this tool when the user asks to find someone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "Search query" },
+          "limit": { "type": "number", "description": "Max results to return", "default": 10 }
+        },
+        "required": ["query"]
+      }
+    },
+    "delete_contact": {
+      "description": "Deletes a contact by ID",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Contact ID" }
+        },
+        "required": ["id"]
+      }
+    }
+  },
+  "resources": {
+    "contacts://list": {
+      "description": "List of all contacts",
+      "mimeType": "application/json",
+      "isTemplate": false
+    }
+  },
+  "prompts": {
+    "summarize_contact": {
+      "description": "Summarize a contact's information",
+      "arguments": [
+        { "name": "contactId", "description": "ID of the contact", "required": true }
+      ]
+    }
+  }
+}
