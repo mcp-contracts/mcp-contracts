@@ -21,3 +21,7 @@ coverage/
 
 # pnpm
 .pnpm-debug.log
+
+# Local project instructions
+CLAUDE.md
+TASKS.md
