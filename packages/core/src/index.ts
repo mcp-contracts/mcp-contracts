@@ -33,8 +33,16 @@ export type {
 
 export { SEVERITY_ORDER } from "./diff-types.js";
 
+export type {
+  CreateSnapshotParams,
+  RawTool,
+  RawResource,
+  RawResourceTemplate,
+  RawPrompt,
+} from "./snapshot.js";
+
 // Functions — uncomment as implemented:
-// export { createSnapshot } from "./snapshot.js";
+export { createSnapshot, normalizeTools, normalizeResources, normalizePrompts } from "./snapshot.js";
 export { computeContentHash, sortKeys } from "./hash.js";
 // export { diffSnapshots } from "./diff.js";
 // export { formatTerminal, formatMarkdown, formatJson } from "./format.js";
