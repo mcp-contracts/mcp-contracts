@@ -1,0 +1,19 @@
+name: Release Notes
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lukekania/generate-release-notes@v0.2.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_conventional_commits: true
