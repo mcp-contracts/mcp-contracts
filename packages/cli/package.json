@@ -38,6 +38,10 @@
     "url": "https://github.com/mcp-contracts/mcp-contracts",
     "directory": "packages/cli"
   },
+  "homepage": "https://github.com/mcp-contracts/mcp-contracts#readme",
+  "bugs": {
+    "url": "https://github.com/mcp-contracts/mcp-contracts/issues"
+  },
   "publishConfig": {
     "access": "public"
   }
