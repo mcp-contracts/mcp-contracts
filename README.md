@@ -115,6 +115,10 @@ jobs:
 | [`@mcp-contracts/core`](./packages/core) | Snapshot types, diff engine, classification logic |
 | [`@mcp-contracts/cli`](./packages/cli) | The `mcpdiff` CLI tool |
 
+---
+
+*mcp-contracts is an open-source project (MIT license). It's community tooling for the MCP ecosystem, not affiliated with Anthropic or the MCP project. Contributions and feedback are welcome.*
+
 ## License
 
 MIT
