@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # Root devDependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+
+  # Core package dependencies
+  - package-ecosystem: "npm"
+    directory: "/packages/core"
+    schedule:
+      interval: "daily"
+
+  # CLI package dependencies
+  - package-ecosystem: "npm"
+    directory: "/packages/cli"
+    schedule:
+      interval: "daily"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
