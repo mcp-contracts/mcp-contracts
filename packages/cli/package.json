@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@mcp-contracts/core": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "cli-table3": "^0.6.0",
     "commander": "^13.0.0"
   },
