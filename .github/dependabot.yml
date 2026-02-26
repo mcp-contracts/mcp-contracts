@@ -4,22 +4,44 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    groups:
+      dev-tooling:
+        patterns:
+          - "*"
 
   # Core package dependencies
   - package-ecosystem: "npm"
     directory: "/packages/core"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    groups:
+      dev-tooling:
+        dependency-type: "development"
+        patterns:
+          - "*"
 
   # CLI package dependencies
   - package-ecosystem: "npm"
     directory: "/packages/cli"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    groups:
+      production:
+        dependency-type: "production"
+        patterns:
+          - "*"
+      dev-tooling:
+        dependency-type: "development"
+        patterns:
+          - "*"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"
