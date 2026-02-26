@@ -23,7 +23,7 @@
     "@mcp-contracts/core": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "cli-table3": "^0.6.0",
-    "commander": "^13.0.0"
+    "commander": "^14.0.3"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
