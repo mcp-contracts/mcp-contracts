@@ -4,7 +4,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     groups:
       dev-tooling:
         patterns:
@@ -14,7 +14,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/packages/core"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     groups:
       dev-tooling:
         dependency-type: "development"
@@ -25,7 +25,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/packages/cli"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     groups:
       production:
         dependency-type: "production"
@@ -40,7 +40,7 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     groups:
       actions:
         patterns:
