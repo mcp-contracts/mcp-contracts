@@ -6,7 +6,7 @@ updates:
     schedule:
       interval: "daily"
     groups:
-      dev-tooling:
+      all-dependencies:
         patterns:
           - "*"
 
@@ -16,8 +16,7 @@ updates:
     schedule:
       interval: "daily"
     groups:
-      dev-tooling:
-        dependency-type: "development"
+      all-dependencies:
         patterns:
           - "*"
 
@@ -27,12 +26,7 @@ updates:
     schedule:
       interval: "daily"
     groups:
-      production:
-        dependency-type: "production"
-        patterns:
-          - "*"
-      dev-tooling:
-        dependency-type: "development"
+      all-dependencies:
         patterns:
           - "*"
 
@@ -42,6 +36,6 @@ updates:
     schedule:
       interval: "daily"
     groups:
-      actions:
+      all-actions:
         patterns:
           - "*"
