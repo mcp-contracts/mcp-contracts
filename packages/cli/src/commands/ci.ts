@@ -1,17 +1,17 @@
 import { appendFileSync } from "node:fs";
+import type { Severity, SnapshotCapture, SnapshotServer } from "@mcp-contracts/core";
 import {
-  SEVERITY_ORDER,
   createSnapshot,
   diffSnapshots,
   formatJson,
   formatMarkdown,
   formatTerminal,
+  SEVERITY_ORDER,
 } from "@mcp-contracts/core";
-import type { Severity, SnapshotCapture, SnapshotServer } from "@mcp-contracts/core";
 import { Command } from "commander";
 import { detectCIEnvironment } from "../ci-env.js";
-import { addTransportOptions, resolveTransport } from "../transport.js";
 import type { TransportOptions } from "../transport.js";
+import { addTransportOptions, resolveTransport } from "../transport.js";
 import {
   CliExitError,
   handleErrors,

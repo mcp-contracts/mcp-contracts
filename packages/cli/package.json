@@ -6,7 +6,9 @@
   "bin": {
     "mcpdiff": "./dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -31,7 +33,14 @@
     "typescript": "^5.7.0",
     "vitest": "^4.0.18"
   },
-  "keywords": ["mcp", "model-context-protocol", "cli", "schema", "diff", "mcpdiff"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "cli",
+    "schema",
+    "diff",
+    "mcpdiff"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

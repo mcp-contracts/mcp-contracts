@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { resolve } from "node:path";
 import { createSnapshot } from "@mcp-contracts/core";
 import { Command } from "commander";
-import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { createCiCommand } from "./ci.js";
 
 vi.mock("./mcp-client.js", async (importOriginal) => {

@@ -1,5 +1,5 @@
-import { createSnapshot } from "@mcp-contracts/core";
 import type { MCPContractSnapshot } from "@mcp-contracts/core";
+import { createSnapshot } from "@mcp-contracts/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock @actions/core
@@ -41,12 +41,12 @@ vi.mock("./comment.js", () => ({
 }));
 
 // Mock MCP SDK transports
-vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
-  Client: vi.fn().mockImplementation(() => ({
-    connect: vi.fn().mockResolvedValue(undefined),
-    getServerVersion: () => ({ name: "test-server", version: "1.0.0" }),
-    getServerCapabilities: () => ({ tools: {} }),
-    listTools: vi.fn().mockResolvedValue({
+vi.mock("@modelcontextprotocol/sdk/client/index.js", () => {
+  class MockClient {
+    connect = vi.fn().mockResolvedValue(undefined);
+    getServerVersion = () => ({ name: "test-server", version: "1.0.0" });
+    getServerCapabilities = () => ({ tools: {} });
+    listTools = vi.fn().mockResolvedValue({
       tools: [
         {
           name: "test_tool",
@@ -54,22 +54,25 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
           inputSchema: { type: "object", properties: {} },
         },
       ],
-    }),
-    close: vi.fn(),
-  })),
-}));
+    });
+    close = vi.fn();
+  }
+  return { Client: MockClient };
+});
 
-vi.mock("@modelcontextprotocol/sdk/client/stdio.js", () => ({
-  StdioClientTransport: vi.fn().mockImplementation(() => ({
-    close: vi.fn().mockResolvedValue(undefined),
-  })),
-}));
+vi.mock("@modelcontextprotocol/sdk/client/stdio.js", () => {
+  class MockStdioClientTransport {
+    close = vi.fn().mockResolvedValue(undefined);
+  }
+  return { StdioClientTransport: MockStdioClientTransport };
+});
 
-vi.mock("@modelcontextprotocol/sdk/client/streamableHttp.js", () => ({
-  StreamableHTTPClientTransport: vi.fn().mockImplementation(() => ({
-    close: vi.fn().mockResolvedValue(undefined),
-  })),
-}));
+vi.mock("@modelcontextprotocol/sdk/client/streamableHttp.js", () => {
+  class MockStreamableHTTPClientTransport {
+    close = vi.fn().mockResolvedValue(undefined);
+  }
+  return { StreamableHTTPClientTransport: MockStreamableHTTPClientTransport };
+});
 
 vi.mock("@modelcontextprotocol/sdk/types.js", () => ({
   LATEST_PROTOCOL_VERSION: "2025-03-26",

@@ -1,8 +1,8 @@
 import type { MCPContractSnapshot } from "@mcp-contracts/core";
 import Table from "cli-table3";
 import { Command } from "commander";
-import { handleErrors, readSnapshotFile, resolveFormat, stripAnsi, writeOutput } from "../utils.js";
 import type { OutputFormat } from "../utils.js";
+import { handleErrors, readSnapshotFile, resolveFormat, stripAnsi, writeOutput } from "../utils.js";
 
 /**
  * Formats a summary table of the snapshot for terminal display.
