@@ -1,6 +1,6 @@
-import { createSnapshot, diffSnapshots, formatMarkdown } from "@mcp-contracts/core";
-import type { DiffReport, MCPContractSnapshot } from "@mcp-contracts/core";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createSnapshot } from "@mcp-contracts/core";
+import type { MCPContractSnapshot } from "@mcp-contracts/core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock @actions/core
 const mockGetInput = vi.fn();
@@ -23,13 +23,21 @@ vi.mock("@actions/core", () => ({
   },
 }));
 
+const mockGithubContext = {
+  eventName: "push",
+  repo: { owner: "test-owner", repo: "test-repo" },
+  payload: {} as Record<string, unknown>,
+};
+
 vi.mock("@actions/github", () => ({
   getOctokit: vi.fn(),
-  context: {
-    eventName: "push",
-    repo: { owner: "test-owner", repo: "test-repo" },
-    payload: {},
-  },
+  context: mockGithubContext,
+}));
+
+const mockPostOrUpdatePRComment = vi.fn().mockResolvedValue(undefined);
+
+vi.mock("./comment.js", () => ({
+  postOrUpdatePRComment: (...args: unknown[]) => mockPostOrUpdatePRComment(...args),
 }));
 
 // Mock MCP SDK transports
@@ -132,6 +140,9 @@ vi.mock("node:fs", async (importOriginal) => {
 describe("GitHub Action", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGithubContext.eventName = "push";
+    mockGithubContext.payload = {};
+    mockGetBooleanInput.mockReturnValue(false);
   });
 
   it("parses inputs correctly", async () => {
@@ -270,5 +281,106 @@ describe("GitHub Action", () => {
     await run();
 
     expect(mockSetFailed).toHaveBeenCalledWith(expect.stringContaining("test error"));
+  });
+
+  describe("PR comments", () => {
+    it("skips commenting when not a PR event", async () => {
+      mockGetInput.mockImplementation((name: string) => {
+        const inputs: Record<string, string> = {
+          baseline: "contracts/baseline.mcpc.json",
+          command: "node server.js",
+          args: "",
+          url: "",
+          "fail-on": "breaking",
+          "github-token": "test-token",
+        };
+        return inputs[name] ?? "";
+      });
+      mockGetBooleanInput.mockReturnValue(true);
+      mockGithubContext.eventName = "push";
+
+      const { run } = await import("./index.js");
+      await run();
+
+      expect(mockPostOrUpdatePRComment).not.toHaveBeenCalled();
+    });
+
+    it("skips commenting when comment-on-pr is false", async () => {
+      mockGetInput.mockImplementation((name: string) => {
+        const inputs: Record<string, string> = {
+          baseline: "contracts/baseline.mcpc.json",
+          command: "node server.js",
+          args: "",
+          url: "",
+          "fail-on": "breaking",
+          "github-token": "test-token",
+        };
+        return inputs[name] ?? "";
+      });
+      mockGetBooleanInput.mockReturnValue(false);
+      mockGithubContext.eventName = "pull_request";
+      mockGithubContext.payload = { pull_request: { number: 42 } };
+
+      const { run } = await import("./index.js");
+      await run();
+
+      expect(mockPostOrUpdatePRComment).not.toHaveBeenCalled();
+    });
+
+    it("posts comment on PR when enabled", async () => {
+      mockGetInput.mockImplementation((name: string) => {
+        const inputs: Record<string, string> = {
+          baseline: "contracts/baseline.mcpc.json",
+          command: "node server.js",
+          args: "",
+          url: "",
+          "fail-on": "breaking",
+          "github-token": "test-token",
+        };
+        return inputs[name] ?? "";
+      });
+      mockGetBooleanInput.mockReturnValue(true);
+      mockGithubContext.eventName = "pull_request";
+      mockGithubContext.payload = { pull_request: { number: 42 } };
+
+      const { run } = await import("./index.js");
+      await run();
+
+      expect(mockPostOrUpdatePRComment).toHaveBeenCalledWith(
+        expect.any(String),
+        "test-token",
+        42,
+      );
+    });
+
+    it("warns when no token available", async () => {
+      const originalToken = process.env.GITHUB_TOKEN;
+      delete process.env.GITHUB_TOKEN;
+
+      mockGetInput.mockImplementation((name: string) => {
+        const inputs: Record<string, string> = {
+          baseline: "contracts/baseline.mcpc.json",
+          command: "node server.js",
+          args: "",
+          url: "",
+          "fail-on": "breaking",
+          "github-token": "",
+        };
+        return inputs[name] ?? "";
+      });
+      mockGetBooleanInput.mockReturnValue(true);
+      mockGithubContext.eventName = "pull_request";
+      mockGithubContext.payload = { pull_request: { number: 42 } };
+
+      const { run } = await import("./index.js");
+      await run();
+
+      expect(mockPostOrUpdatePRComment).not.toHaveBeenCalled();
+      expect(mockWarning).toHaveBeenCalledWith(
+        expect.stringContaining("No GitHub token"),
+      );
+
+      process.env.GITHUB_TOKEN = originalToken;
+    });
   });
 });

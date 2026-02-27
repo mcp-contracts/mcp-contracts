@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import * as core from "@actions/core";
 import * as github from "@actions/github";
+import { postOrUpdatePRComment } from "./comment.js";
 import {
   SEVERITY_ORDER,
   createSnapshot,
@@ -255,6 +256,21 @@ export async function run(): Promise<void> {
     // Write step summary
     core.summary.addRaw(markdown);
     await core.summary.write();
+
+    // PR comment
+    const commentOnPr = core.getBooleanInput("comment-on-pr");
+    if (commentOnPr && github.context.eventName === "pull_request") {
+      const token =
+        core.getInput("github-token", { required: false }) || process.env.GITHUB_TOKEN;
+      if (token) {
+        const prNumber = github.context.payload.pull_request?.number;
+        if (prNumber) {
+          await postOrUpdatePRComment(markdown, token, prNumber);
+        }
+      } else {
+        core.warning("No GitHub token available — skipping PR comment");
+      }
+    }
 
     // Set outputs
     const hasChanges = report.changes.length > 0;
