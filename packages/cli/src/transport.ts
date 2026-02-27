@@ -1,7 +1,7 @@
 import type { Command } from "commander";
-import { parseEnvPairs } from "./utils.js";
 import type { ResolvedTransport } from "./commands/mcp-client.js";
 import { readMcpConfig } from "./commands/mcp-client.js";
+import { parseEnvPairs } from "./utils.js";
 
 /** Options accepted by resolveTransport. */
 export interface TransportOptions {

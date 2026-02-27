@@ -39,6 +39,8 @@ describe("integration: CLI", () => {
       expect(stdout).toContain("snapshot");
       expect(stdout).toContain("diff");
       expect(stdout).toContain("inspect");
+      expect(stdout).toContain("baseline");
+      expect(stdout).toContain("ci");
     });
   });
 
@@ -46,7 +48,7 @@ describe("integration: CLI", () => {
     it("exits 0 and prints version", async () => {
       const { stdout, exitCode } = await runCli("--version");
       expect(exitCode).toBe(0);
-      expect(stdout.trim()).toBe("0.1.0");
+      expect(stdout.trim()).toBe("0.2.0");
     });
   });
 
@@ -147,6 +149,43 @@ describe("integration: CLI", () => {
       const { stderr, exitCode } = await runCli("diff", "/nonexistent/file.mcpc.json", V1);
       expect(exitCode).toBe(2);
       expect(stderr).toContain("Error");
+    });
+  });
+
+  describe("baseline", () => {
+    it("mcpdiff baseline --help shows update/verify subcommands", async () => {
+      const { stdout, exitCode } = await runCli("baseline", "--help");
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("update");
+      expect(stdout).toContain("verify");
+    });
+
+    it("mcpdiff baseline update --help shows transport options", async () => {
+      const { stdout, exitCode } = await runCli("baseline", "update", "--help");
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("--command");
+      expect(stdout).toContain("--url");
+      expect(stdout).toContain("--config");
+    });
+
+    it("mcpdiff baseline verify --help shows transport and baseline options", async () => {
+      const { stdout, exitCode } = await runCli("baseline", "verify", "--help");
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("--command");
+      expect(stdout).toContain("--url");
+      expect(stdout).toContain("--baseline");
+    });
+  });
+
+  describe("ci", () => {
+    it("mcpdiff ci --help shows baseline, transport, and fail-on options", async () => {
+      const { stdout, exitCode } = await runCli("ci", "--help");
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("--baseline");
+      expect(stdout).toContain("--command");
+      expect(stdout).toContain("--url");
+      expect(stdout).toContain("--fail-on");
+      expect(stdout).toContain("--severity");
     });
   });
 });

@@ -1,13 +1,7 @@
 import { readFileSync } from "node:fs";
 import * as core from "@actions/core";
 import * as github from "@actions/github";
-import { postOrUpdatePRComment } from "./comment.js";
-import {
-  SEVERITY_ORDER,
-  createSnapshot,
-  diffSnapshots,
-  formatMarkdown,
-} from "@mcp-contracts/core";
+import { SEVERITY_ORDER, createSnapshot, diffSnapshots, formatMarkdown } from "@mcp-contracts/core";
 import type {
   DiffReport,
   MCPContractSnapshot,
@@ -24,6 +18,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
+import { postOrUpdatePRComment } from "./comment.js";
 
 const VALID_SEVERITIES = new Set<string>(["safe", "warning", "breaking"]);
 
@@ -89,13 +84,14 @@ async function connectToServer(options: {
  * @param client - The connected MCP client.
  * @returns Captured server data.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: pagination loops
 async function captureData(client: Client): Promise<CapturedData> {
   const capabilities = client.getServerCapabilities() ?? {};
 
-  let tools: RawTool[] = [];
-  let resources: RawResource[] = [];
-  let resourceTemplates: RawResourceTemplate[] = [];
-  let prompts: RawPrompt[] = [];
+  const tools: RawTool[] = [];
+  const resources: RawResource[] = [];
+  const resourceTemplates: RawResourceTemplate[] = [];
+  const prompts: RawPrompt[] = [];
 
   if (capabilities.tools) {
     let cursor: string | undefined;
@@ -135,9 +131,7 @@ async function captureData(client: Client): Promise<CapturedData> {
 
     cursor = undefined;
     do {
-      const result = await client.listResourceTemplates(
-        cursor ? { cursor } : undefined,
-      );
+      const result = await client.listResourceTemplates(cursor ? { cursor } : undefined);
       for (const template of result.resourceTemplates) {
         resourceTemplates.push({
           uriTemplate: template.uriTemplate,
@@ -186,6 +180,7 @@ function exceedsThreshold(report: DiffReport, failOn: Severity): boolean {
  * Reads inputs, connects to MCP server, diffs against baseline,
  * sets outputs, writes step summary, and optionally fails the action.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: orchestration function
 export async function run(): Promise<void> {
   let transport: Transport | undefined;
 
@@ -228,9 +223,7 @@ export async function run(): Promise<void> {
       capabilities: serverCapabilities as Record<string, unknown>,
     };
 
-    const source = command
-      ? [command, ...(args ?? [])].join(" ")
-      : url;
+    const source = command ? [command, ...(args ?? [])].join(" ") : url;
 
     const capture: SnapshotCapture = {
       transport: command ? "stdio" : "streamable-http",
@@ -260,8 +253,7 @@ export async function run(): Promise<void> {
     // PR comment
     const commentOnPr = core.getBooleanInput("comment-on-pr");
     if (commentOnPr && github.context.eventName === "pull_request") {
-      const token =
-        core.getInput("github-token", { required: false }) || process.env.GITHUB_TOKEN;
+      const token = core.getInput("github-token", { required: false }) || process.env.GITHUB_TOKEN;
       if (token) {
         const prNumber = github.context.payload.pull_request?.number;
         if (prNumber) {

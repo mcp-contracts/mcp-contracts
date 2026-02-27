@@ -181,9 +181,7 @@ describe("GitHub Action", () => {
     const { run } = await import("./index.js");
     await run();
 
-    expect(mockSetFailed).toHaveBeenCalledWith(
-      expect.stringContaining("required"),
-    );
+    expect(mockSetFailed).toHaveBeenCalledWith(expect.stringContaining("required"));
   });
 
   it("sets outputs correctly when no changes", async () => {
@@ -204,10 +202,7 @@ describe("GitHub Action", () => {
     expect(mockSetOutput).toHaveBeenCalledWith("has-changes", "false");
     expect(mockSetOutput).toHaveBeenCalledWith("has-breaking", "false");
     expect(mockSetOutput).toHaveBeenCalledWith("exit-code", "0");
-    expect(mockSetOutput).toHaveBeenCalledWith(
-      "summary",
-      expect.any(String),
-    );
+    expect(mockSetOutput).toHaveBeenCalledWith("summary", expect.any(String));
   });
 
   it("sets outputs correctly when breaking changes detected", async () => {
@@ -228,9 +223,7 @@ describe("GitHub Action", () => {
     expect(mockSetOutput).toHaveBeenCalledWith("has-changes", "true");
     expect(mockSetOutput).toHaveBeenCalledWith("has-breaking", "true");
     expect(mockSetOutput).toHaveBeenCalledWith("exit-code", "1");
-    expect(mockSetFailed).toHaveBeenCalledWith(
-      "Breaking MCP contract changes detected",
-    );
+    expect(mockSetFailed).toHaveBeenCalledWith("Breaking MCP contract changes detected");
   });
 
   it("does not call setFailed for warnings when fail-on is breaking", async () => {
@@ -346,16 +339,12 @@ describe("GitHub Action", () => {
       const { run } = await import("./index.js");
       await run();
 
-      expect(mockPostOrUpdatePRComment).toHaveBeenCalledWith(
-        expect.any(String),
-        "test-token",
-        42,
-      );
+      expect(mockPostOrUpdatePRComment).toHaveBeenCalledWith(expect.any(String), "test-token", 42);
     });
 
     it("warns when no token available", async () => {
       const originalToken = process.env.GITHUB_TOKEN;
-      delete process.env.GITHUB_TOKEN;
+      process.env.GITHUB_TOKEN = "";
 
       mockGetInput.mockImplementation((name: string) => {
         const inputs: Record<string, string> = {
@@ -376,9 +365,7 @@ describe("GitHub Action", () => {
       await run();
 
       expect(mockPostOrUpdatePRComment).not.toHaveBeenCalled();
-      expect(mockWarning).toHaveBeenCalledWith(
-        expect.stringContaining("No GitHub token"),
-      );
+      expect(mockWarning).toHaveBeenCalledWith(expect.stringContaining("No GitHub token"));
 
       process.env.GITHUB_TOKEN = originalToken;
     });

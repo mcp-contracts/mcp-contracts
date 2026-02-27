@@ -182,10 +182,10 @@ describe("ci command", () => {
   it("falls back to TTY detection when not in CI", async () => {
     const baselinePath = createMockBaseline();
     // Ensure no CI env vars
-    delete process.env.CI;
-    delete process.env.GITHUB_ACTIONS;
-    delete process.env.GITLAB_CI;
-    delete process.env.CIRCLECI;
+    process.env.CI = undefined;
+    process.env.GITHUB_ACTIONS = undefined;
+    process.env.GITLAB_CI = undefined;
+    process.env.CIRCLECI = undefined;
 
     const program = createProgram();
     await program.parseAsync([
@@ -277,13 +277,7 @@ describe("ci command", () => {
   it("errors if --baseline is missing", async () => {
     const program = createProgram();
     try {
-      await program.parseAsync([
-        "node",
-        "mcpdiff",
-        "ci",
-        "--command",
-        "node",
-      ]);
+      await program.parseAsync(["node", "mcpdiff", "ci", "--command", "node"]);
     } catch {
       // Commander exits on missing required option
     }
@@ -295,13 +289,7 @@ describe("ci command", () => {
     const baselinePath = createMockBaseline();
     const program = createProgram();
     try {
-      await program.parseAsync([
-        "node",
-        "mcpdiff",
-        "ci",
-        "--baseline",
-        baselinePath,
-      ]);
+      await program.parseAsync(["node", "mcpdiff", "ci", "--baseline", baselinePath]);
     } catch {
       // expected process.exit
     }

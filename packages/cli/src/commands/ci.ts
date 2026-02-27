@@ -58,6 +58,7 @@ export function createCiCommand(): Command {
     .option("--fail-on <level>", "Severity threshold for exit code 1", "breaking")
     .option("--severity <level>", "Minimum severity to display", "safe")
     .action(
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: orchestration function
       handleErrors(async (options: Record<string, unknown>) => {
         const rootOpts = getRootOpts(cmd);
         const quiet = rootOpts.quiet === true;
@@ -92,9 +93,7 @@ export function createCiCommand(): Command {
         const serverCapabilities = client.getServerCapabilities() ?? {};
 
         if (!quiet && serverVersion) {
-          process.stderr.write(
-            `Connected to ${serverVersion.name} v${serverVersion.version}\n`,
-          );
+          process.stderr.write(`Connected to ${serverVersion.name} v${serverVersion.version}\n`);
         }
 
         const data = await captureServerData(client);

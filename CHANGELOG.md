@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-02-27
+
+### Added
+
+- **`mcpdiff ci` command** — All-in-one CI command: captures snapshot, diffs against baseline, outputs report, sets exit code. Auto-detects CI environment (GitHub Actions, GitLab CI, CircleCI) and adjusts output format.
+- **`mcpdiff baseline update`** — Captures a snapshot and writes it to a baseline path.
+- **`mcpdiff baseline verify`** — Verifies the current server matches a committed baseline (content hash comparison).
+- **GitHub Action** (`packages/github-action/`) — Reusable GitHub Action for CI pipelines. Diffs MCP server schemas against a baseline, posts PR comments, writes step summaries.
+- **CI environment detection** — Detects GitHub Actions, GitLab CI, CircleCI. Writes GitHub Actions step summaries automatically.
+- **PR comment support** — GitHub Action posts (or updates) a collapsible diff report as a PR comment.
+
+### Internal
+
+- Extracted shared transport resolution to `packages/cli/src/transport.ts`.
+
 ## [0.1.0] - 2026-02-21
 
 ### Added

@@ -66,9 +66,7 @@ export function createBaselineUpdateCommand(): Command {
       const serverCapabilities = client.getServerCapabilities() ?? {};
 
       if (!quiet && serverVersion) {
-        process.stderr.write(
-          `Connected to ${serverVersion.name} v${serverVersion.version}\n`,
-        );
+        process.stderr.write(`Connected to ${serverVersion.name} v${serverVersion.version}\n`);
       }
 
       const data = await captureServerData(client);
@@ -128,92 +126,87 @@ export function createBaselineVerifyCommand(): Command {
 
   addTransportOptions(cmd);
 
-  cmd
-    .option("--baseline <path>", "Path to baseline file", DEFAULT_BASELINE_PATH)
-    .action(
-      handleErrors(async (options: Record<string, unknown>) => {
-        const rootOpts = getRootOpts(cmd);
-        const quiet = rootOpts.quiet === true;
-        const baselinePath = (options.baseline as string) ?? DEFAULT_BASELINE_PATH;
+  cmd.option("--baseline <path>", "Path to baseline file", DEFAULT_BASELINE_PATH).action(
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: orchestration function
+    handleErrors(async (options: Record<string, unknown>) => {
+      const rootOpts = getRootOpts(cmd);
+      const quiet = rootOpts.quiet === true;
+      const baselinePath = (options.baseline as string) ?? DEFAULT_BASELINE_PATH;
 
-        const baseline = readSnapshotFile(baselinePath);
+      const baseline = readSnapshotFile(baselinePath);
 
-        const transportOpts: TransportOptions = {
-          command: options.command as string | undefined,
-          url: options.url as string | undefined,
-          config: options.config as string | undefined,
-          server: options.server as string | undefined,
-          args: options.args as string[] | undefined,
-          env: options.env as string[] | undefined,
-        };
-        const config = resolveTransport(transportOpts);
+      const transportOpts: TransportOptions = {
+        command: options.command as string | undefined,
+        url: options.url as string | undefined,
+        config: options.config as string | undefined,
+        server: options.server as string | undefined,
+        args: options.args as string[] | undefined,
+        env: options.env as string[] | undefined,
+      };
+      const config = resolveTransport(transportOpts);
 
+      if (!quiet) {
+        process.stderr.write("Connecting to MCP server...\n");
+      }
+
+      const { client, transport, protocolVersion } = await connectToServer(config);
+
+      const serverVersion = client.getServerVersion();
+      const serverCapabilities = client.getServerCapabilities() ?? {};
+
+      if (!quiet && serverVersion) {
+        process.stderr.write(`Connected to ${serverVersion.name} v${serverVersion.version}\n`);
+      }
+
+      const data = await captureServerData(client);
+      await transport.close();
+
+      const server: SnapshotServer = {
+        name: serverVersion?.name ?? "unknown",
+        version: serverVersion?.version ?? "unknown",
+        protocolVersion,
+        capabilities: serverCapabilities as Record<string, unknown>,
+      };
+
+      const source =
+        config.transport === "stdio"
+          ? [config.command, ...(config.args ?? [])].join(" ")
+          : config.url;
+
+      const capture: SnapshotCapture = {
+        transport: config.transport,
+        source,
+        tool: "mcpdiff/0.1.0",
+      };
+
+      const current = createSnapshot({
+        server,
+        tools: data.tools,
+        resources: data.resources,
+        resourceTemplates: data.resourceTemplates,
+        prompts: data.prompts,
+        capture,
+      });
+
+      if (baseline.contentHash === current.contentHash) {
         if (!quiet) {
-          process.stderr.write("Connecting to MCP server...\n");
+          process.stderr.write("Baseline verified: contract unchanged\n");
         }
+        return;
+      }
 
-        const { client, transport, protocolVersion } = await connectToServer(config);
+      const report = diffSnapshots(baseline, current);
+      const { breaking, warning, safe } = report.summary;
+      const parts: string[] = [];
+      if (breaking > 0) parts.push(`${breaking} breaking`);
+      if (warning > 0) parts.push(`${warning} warning`);
+      if (safe > 0) parts.push(`${safe} safe`);
+      const summary = parts.length > 0 ? parts.join(", ") : "0";
 
-        const serverVersion = client.getServerVersion();
-        const serverCapabilities = client.getServerCapabilities() ?? {};
-
-        if (!quiet && serverVersion) {
-          process.stderr.write(
-            `Connected to ${serverVersion.name} v${serverVersion.version}\n`,
-          );
-        }
-
-        const data = await captureServerData(client);
-        await transport.close();
-
-        const server: SnapshotServer = {
-          name: serverVersion?.name ?? "unknown",
-          version: serverVersion?.version ?? "unknown",
-          protocolVersion,
-          capabilities: serverCapabilities as Record<string, unknown>,
-        };
-
-        const source =
-          config.transport === "stdio"
-            ? [config.command, ...(config.args ?? [])].join(" ")
-            : config.url;
-
-        const capture: SnapshotCapture = {
-          transport: config.transport,
-          source,
-          tool: "mcpdiff/0.1.0",
-        };
-
-        const current = createSnapshot({
-          server,
-          tools: data.tools,
-          resources: data.resources,
-          resourceTemplates: data.resourceTemplates,
-          prompts: data.prompts,
-          capture,
-        });
-
-        if (baseline.contentHash === current.contentHash) {
-          if (!quiet) {
-            process.stderr.write("Baseline verified: contract unchanged\n");
-          }
-          return;
-        }
-
-        const report = diffSnapshots(baseline, current);
-        const { breaking, warning, safe } = report.summary;
-        const parts: string[] = [];
-        if (breaking > 0) parts.push(`${breaking} breaking`);
-        if (warning > 0) parts.push(`${warning} warning`);
-        if (safe > 0) parts.push(`${safe} safe`);
-        const summary = parts.length > 0 ? parts.join(", ") : "0";
-
-        process.stderr.write(
-          `Baseline mismatch: contract has changed (${summary} changes)\n`,
-        );
-        throw new CliExitError(1);
-      }),
-    );
+      process.stderr.write(`Baseline mismatch: contract has changed (${summary} changes)\n`);
+      throw new CliExitError(1);
+    }),
+  );
 
   return cmd;
 }

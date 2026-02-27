@@ -1,4 +1,4 @@
-import { writeFileSync, unlinkSync } from "node:fs";
+import { unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Command } from "commander";
 import { describe, expect, it } from "vitest";
@@ -43,9 +43,9 @@ describe("resolveTransport", () => {
   });
 
   it("errors when multiple transports specified", () => {
-    expect(() =>
-      resolveTransport({ command: "node", url: "http://localhost:3000" }),
-    ).toThrow("Specify only one of");
+    expect(() => resolveTransport({ command: "node", url: "http://localhost:3000" })).toThrow(
+      "Specify only one of",
+    );
   });
 
   it("passes --args through for stdio", () => {
