@@ -6,48 +6,43 @@
  * @packageDocumentation
  */
 
-// Types
+export { diffSnapshots } from "./diff.js";
 export type {
-  MCPContractSnapshot,
-  ToolContract,
-  ResourceContract,
-  PromptContract,
-  PromptArgument,
-  SnapshotServer,
-  SnapshotCapture,
-  JSONSchema,
-} from "./types.js";
-
-export { SNAPSHOT_VERSION } from "./types.js";
-
-export type {
-  DiffReport,
+  ChangeCategory,
+  ChangeType,
   DiffMeta,
-  DiffSummary,
   DiffOptions,
+  DiffReport,
+  DiffSummary,
   SchemaChange,
   Severity,
-  ChangeType,
-  ChangeCategory,
 } from "./diff-types.js";
-
 export { SEVERITY_ORDER } from "./diff-types.js";
-
+export { formatJson, formatMarkdown, formatTerminal } from "./format.js";
+export { computeContentHash, sortKeys } from "./hash.js";
 export type {
   CreateSnapshotParams,
-  RawTool,
+  RawPrompt,
   RawResource,
   RawResourceTemplate,
-  RawPrompt,
+  RawTool,
 } from "./snapshot.js";
-
 // Functions — uncomment as implemented:
 export {
   createSnapshot,
-  normalizeTools,
-  normalizeResources,
   normalizePrompts,
+  normalizeResources,
+  normalizeTools,
 } from "./snapshot.js";
-export { computeContentHash, sortKeys } from "./hash.js";
-export { diffSnapshots } from "./diff.js";
-export { formatTerminal, formatMarkdown, formatJson } from "./format.js";
+// Types
+export type {
+  JSONSchema,
+  MCPContractSnapshot,
+  PromptArgument,
+  PromptContract,
+  ResourceContract,
+  SnapshotCapture,
+  SnapshotServer,
+  ToolContract,
+} from "./types.js";
+export { SNAPSHOT_VERSION } from "./types.js";

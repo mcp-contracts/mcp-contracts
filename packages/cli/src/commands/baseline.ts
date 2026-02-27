@@ -1,10 +1,10 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { createSnapshot, diffSnapshots } from "@mcp-contracts/core";
 import type { SnapshotCapture, SnapshotServer } from "@mcp-contracts/core";
+import { createSnapshot, diffSnapshots } from "@mcp-contracts/core";
 import { Command } from "commander";
-import { addTransportOptions, resolveTransport } from "../transport.js";
 import type { TransportOptions } from "../transport.js";
+import { addTransportOptions, resolveTransport } from "../transport.js";
 import { CliExitError, handleErrors, readSnapshotFile, writeOutput } from "../utils.js";
 import { captureServerData, connectToServer } from "./mcp-client.js";
 

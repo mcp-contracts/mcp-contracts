@@ -9,7 +9,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -24,12 +26,19 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^25.3.2",
     "tsup": "^8.0.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.0.0"
+    "vitest": "^4.0.18"
   },
-  "keywords": ["mcp", "model-context-protocol", "schema", "diff", "contract", "validation"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "schema",
+    "diff",
+    "contract",
+    "validation"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

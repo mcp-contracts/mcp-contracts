@@ -1,11 +1,11 @@
+import type { Severity } from "@mcp-contracts/core";
 import {
-  SEVERITY_ORDER,
   diffSnapshots,
   formatJson,
   formatMarkdown,
   formatTerminal,
+  SEVERITY_ORDER,
 } from "@mcp-contracts/core";
-import type { Severity } from "@mcp-contracts/core";
 import { Command } from "commander";
 import {
   CliExitError,

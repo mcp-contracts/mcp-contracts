@@ -1,15 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { computeContentHash } from "./hash.js";
 import {
   type CreateSnapshotParams,
-  type RawPrompt,
-  type RawResource,
-  type RawResourceTemplate,
-  type RawTool,
   createSnapshot,
   normalizePrompts,
   normalizeResources,
   normalizeTools,
+  type RawPrompt,
+  type RawResource,
+  type RawResourceTemplate,
+  type RawTool,
 } from "./snapshot.js";
 
 const minimalServer = {

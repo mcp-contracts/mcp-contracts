@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import * as core from "@actions/core";
 import * as github from "@actions/github";
-import { SEVERITY_ORDER, createSnapshot, diffSnapshots, formatMarkdown } from "@mcp-contracts/core";
 import type {
   DiffReport,
   MCPContractSnapshot,
@@ -13,6 +12,7 @@ import type {
   SnapshotCapture,
   SnapshotServer,
 } from "@mcp-contracts/core";
+import { createSnapshot, diffSnapshots, formatMarkdown, SEVERITY_ORDER } from "@mcp-contracts/core";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";

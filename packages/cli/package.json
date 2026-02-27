@@ -6,7 +6,9 @@
   "bin": {
     "mcpdiff": "./dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -21,17 +23,24 @@
   },
   "dependencies": {
     "@mcp-contracts/core": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "cli-table3": "^0.6.0",
-    "commander": "^13.0.0"
+    "commander": "^14.0.3"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^25.3.2",
     "tsup": "^8.0.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.0.0"
+    "vitest": "^4.0.18"
   },
-  "keywords": ["mcp", "model-context-protocol", "cli", "schema", "diff", "mcpdiff"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "cli",
+    "schema",
+    "diff",
+    "mcpdiff"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
