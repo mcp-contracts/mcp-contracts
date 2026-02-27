@@ -1,28 +1,8 @@
 version: 2
 updates:
-  # Root devDependencies
+  # All npm dependencies (root + workspace packages)
   - package-ecosystem: "npm"
     directory: "/"
-    schedule:
-      interval: "daily"
-    groups:
-      all-dependencies:
-        patterns:
-          - "*"
-
-  # Core package dependencies
-  - package-ecosystem: "npm"
-    directory: "/packages/core"
-    schedule:
-      interval: "daily"
-    groups:
-      all-dependencies:
-        patterns:
-          - "*"
-
-  # CLI package dependencies
-  - package-ecosystem: "npm"
-    directory: "/packages/cli"
     schedule:
       interval: "daily"
     groups:
@@ -39,3 +19,5 @@ updates:
       all-actions:
         patterns:
           - "*"
+    ignore:
+      - dependency-name: "lukekania/generate-release-notes"
