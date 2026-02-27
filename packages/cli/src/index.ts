@@ -8,6 +8,7 @@
 
 import { Command } from "commander";
 import { createBaselineCommand } from "./commands/baseline.js";
+import { createCiCommand } from "./commands/ci.js";
 import { createDiffCommand } from "./commands/diff.js";
 import { createInspectCommand } from "./commands/inspect.js";
 import { createSnapshotCommand } from "./commands/snapshot.js";
@@ -25,6 +26,7 @@ program
   .option("--verbose", "Show detailed information");
 
 program.addCommand(createBaselineCommand());
+program.addCommand(createCiCommand());
 program.addCommand(createDiffCommand());
 program.addCommand(createInspectCommand());
 program.addCommand(createSnapshotCommand());
