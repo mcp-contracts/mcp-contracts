@@ -69,6 +69,41 @@ Or use the automated demo script:
 ./examples/contacts-server/demo.sh
 ```
 
+## Baseline Workflow
+
+The baseline commands let you pin a contract and verify it hasn't drifted:
+
+```bash
+# 1. Capture a baseline from the live server
+node packages/cli/dist/index.js baseline update \
+  --command node --args examples/contacts-server/v1/server.js
+
+# → writes contracts/baseline.mcpc.json
+
+# 2. Verify the server still matches (should pass)
+node packages/cli/dist/index.js baseline verify \
+  --command node --args examples/contacts-server/v1/server.js
+
+# 3. Verify against the v2 server (should fail — contract changed)
+node packages/cli/dist/index.js baseline verify \
+  --command node --args examples/contacts-server/v2/server.js
+echo "Exit code: $?"
+```
+
+## CI Command
+
+The `ci` command is an all-in-one for CI pipelines — capture, diff, format, and exit code in a single step:
+
+```bash
+# Run against a baseline
+node packages/cli/dist/index.js ci \
+  --baseline examples/contacts-server/snapshots/v1.0.0.mcpc.json \
+  --command node --args examples/contacts-server/v2/server.js
+
+# It auto-detects CI environments and selects the right output format.
+# In GitHub Actions, it writes to GITHUB_STEP_SUMMARY automatically.
+```
+
 ## What Changes Between v1 and v2
 
 The contacts server simulates a realistic version upgrade with multiple change types:
@@ -86,4 +121,7 @@ This gives you a realistic example hitting all three severity levels.
 
 ## Example: CI Usage
 
-See `examples/ci/` for a GitHub Actions workflow example that uses `mcpdiff` to check for breaking changes on every PR.
+See `examples/ci/` for GitHub Actions workflow examples showing two approaches:
+
+- **GitHub Action** — one-step integration with PR comments and step summary
+- **`mcpdiff ci` CLI** — works in any CI system (GitHub, GitLab, CircleCI, etc.)

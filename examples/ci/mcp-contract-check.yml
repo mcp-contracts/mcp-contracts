@@ -1,12 +1,12 @@
-# Example: Using mcpdiff in CI to catch breaking MCP schema changes
+# Example: Using mcp-contracts in CI to catch breaking MCP schema changes
 #
 # This workflow runs on every pull request that modifies your MCP server.
-# It captures a fresh snapshot and diffs it against the committed baseline.
+# It diffs the live server against a committed baseline.
 # If breaking changes are detected, the workflow fails.
 #
 # Setup:
-#   1. Capture your initial baseline: mcpdiff snapshot --command "..." -o contracts/baseline.mcpc.json
-#   2. Commit the baseline to your repo
+#   1. Capture your initial baseline: mcpdiff baseline update --command "node dist/index.js"
+#   2. Commit contracts/baseline.mcpc.json to your repo
 #   3. Add this workflow to .github/workflows/
 
 name: MCP Contract Check
@@ -18,7 +18,9 @@ on:
       - "package.json"
 
 jobs:
-  contract-check:
+  # ── Option A: GitHub Action (recommended) ──────────────────
+  # One step handles everything: connect, diff, report, PR comment.
+  contract-check-action:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,29 +29,39 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies & build
+        run: npm ci && npm run build
 
-      - name: Build server
-        run: npm run build
+      - name: Check MCP contract
+        uses: mcp-contracts/github-action@v0
+        with:
+          baseline: contracts/baseline.mcpc.json
+          command: node dist/index.js
+          fail-on: breaking
+          comment-on-pr: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Option B: mcpdiff ci command ───────────────────────────
+  # Use the CLI directly — works in any CI system, not just GitHub.
+  contract-check-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies & build
+        run: npm ci && npm run build
 
       - name: Install mcpdiff
         run: npm install -g @mcp-contracts/cli
 
-      - name: Capture current snapshot
-        run: mcpdiff snapshot --command "node dist/index.js" -o /tmp/current.mcpc.json
+      - name: Check MCP contract
+        run: mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node dist/index.js"
+        # Auto-detects GitHub Actions, writes step summary, uses markdown format
 
-      - name: Diff against baseline
-        run: mcpdiff diff contracts/baseline.mcpc.json /tmp/current.mcpc.json --format markdown > /tmp/diff-report.md
-
-      # Optional: post the diff as a PR comment
-      - name: Comment on PR
-        if: always()
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: mcp-contract
-          path: /tmp/diff-report.md
-
-      # Optional: also check with strict mode (fail on warnings)
-      # - name: Strict check (fail on warnings)
-      #   run: mcpdiff diff contracts/baseline.mcpc.json /tmp/current.mcpc.json --fail-on warning
+      # Optional: fail on warnings too (stricter)
+      # - name: Strict check
+      #   run: mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node dist/index.js" --fail-on warning
