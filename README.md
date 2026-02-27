@@ -19,13 +19,17 @@ MCP servers expose tools, resources, and prompts to AI agents. These interfaces 
 ## Quick Start
 
 ```bash
-# Capture a snapshot of your MCP server's tool schemas
+# Capture a baseline snapshot of your MCP server
+npx mcpdiff baseline update --command "node ./my-server/dist/index.js"
+# → writes contracts/baseline.mcpc.json
+
+# Later, verify nothing has changed
+npx mcpdiff baseline verify --command "node ./my-server/dist/index.js"
+
+# Or diff two snapshots manually
 npx mcpdiff snapshot --command "node ./my-server/dist/index.js" -o v1.mcpc.json
-
-# Make changes to your server, then capture again
+# ... make changes ...
 npx mcpdiff snapshot --command "node ./my-server/dist/index.js" -o v2.mcpc.json
-
-# Diff the two snapshots
 npx mcpdiff diff v1.mcpc.json v2.mcpc.json
 ```
 
@@ -73,6 +77,39 @@ mcpdiff diff before.mcpc.json after.mcpc.json --format json
 
 **Exit codes:** `0` = no breaking changes, `1` = breaking changes detected, `2` = error.
 
+### `mcpdiff baseline`
+
+Manage contract baselines — capture and verify snapshots against a committed baseline.
+
+```bash
+# Capture a baseline (default: contracts/baseline.mcpc.json)
+mcpdiff baseline update --command "node server.js"
+
+# Write to a custom path
+mcpdiff -o custom/path.mcpc.json baseline update --command "node server.js"
+
+# Verify the server still matches the baseline
+mcpdiff baseline verify --command "node server.js"
+mcpdiff baseline verify --baseline custom/path.mcpc.json --url http://localhost:3000/mcp
+```
+
+### `mcpdiff ci`
+
+All-in-one CI command: captures a snapshot, diffs against a baseline, outputs the report, and sets the exit code.
+
+```bash
+# Basic usage
+mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js"
+
+# Fail on warnings too (stricter)
+mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js" --fail-on warning
+
+# Only show breaking changes
+mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js" --severity breaking
+```
+
+Auto-detects CI environments (GitHub Actions, GitLab CI, CircleCI) and selects the appropriate output format. Writes to `GITHUB_STEP_SUMMARY` when running in GitHub Actions.
+
 ### `mcpdiff inspect`
 
 Summarizes a snapshot file.
@@ -91,7 +128,9 @@ Tool descriptions aren't just documentation — they're instructions to the mode
 
 ## CI Integration
 
-Use `mcpdiff` in your CI pipeline to catch breaking changes before they reach production:
+### GitHub Action
+
+The easiest way to integrate with GitHub is the official action:
 
 ```yaml
 # .github/workflows/mcp-contract.yml
@@ -102,11 +141,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - run: npm install -g @mcp-contracts/cli
-      - run: mcpdiff snapshot --command "node dist/index.js" -o current.mcpc.json
-      - run: mcpdiff diff contracts/baseline.mcpc.json current.mcpc.json
+      - uses: mcp-contracts/github-action@v0
+        with:
+          baseline: contracts/baseline.mcpc.json
+          command: node dist/index.js
+          fail-on: breaking        # or "warning" / "safe"
+          comment-on-pr: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+**Outputs:** `has-changes`, `has-breaking`, `summary`, `exit-code` — use them in subsequent steps.
+
+### CLI in CI
+
+Use `mcpdiff ci` directly in any CI system:
+
+```yaml
+# .github/workflows/mcp-contract.yml
+name: MCP Contract Check
+on: [pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install -g @mcp-contracts/cli
+      - run: mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node dist/index.js"
+```
+
+The `ci` command auto-detects the CI environment and selects the right output format (markdown for GitHub Actions, JSON otherwise). It also writes to `GITHUB_STEP_SUMMARY` automatically.
 
 ## Packages
 
@@ -114,6 +177,7 @@ jobs:
 |---------|-------------|
 | [`@mcp-contracts/core`](./packages/core) | Snapshot types, diff engine, classification logic |
 | [`@mcp-contracts/cli`](./packages/cli) | The `mcpdiff` CLI tool |
+| [`@mcp-contracts/github-action`](./packages/github-action) | GitHub Action for CI integration |
 
 ---
 
