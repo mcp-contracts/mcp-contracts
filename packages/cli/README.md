@@ -74,6 +74,8 @@ jobs:
       - run: mcpdiff snapshot --command "node dist/index.js" -o current.mcpc.json
       - run: mcpdiff diff contracts/baseline.mcpc.json current.mcpc.json
 ```
+---
+*mcp-contracts is an open-source project (MIT license). It's community tooling for the MCP ecosystem, not affiliated with Anthropic or the MCP project. Contributions and feedback are welcome.*
 
 ## License
 

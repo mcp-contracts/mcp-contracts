@@ -52,6 +52,9 @@ Every detected change is classified as one of:
 
 See the [full specification](https://github.com/mcp-contracts/mcp-contracts/blob/main/SPEC.md) for classification rules.
 
+---
+*mcp-contracts is an open-source project (MIT license). It's community tooling for the MCP ecosystem, not affiliated with Anthropic or the MCP project. Contributions and feedback are welcome.*
+
 ## License
 
 MIT
