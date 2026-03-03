@@ -46,7 +46,9 @@ export function formatWatchCycle(
 
   if (event.triggerPaths.length > 0) {
     const displayed = event.triggerPaths.slice(0, 5);
-    lines.push(`  Changed: ${displayed.join(", ")}${event.triggerPaths.length > 5 ? ` (+${event.triggerPaths.length - 5} more)` : ""}`);
+    lines.push(
+      `  Changed: ${displayed.join(", ")}${event.triggerPaths.length > 5 ? ` (+${event.triggerPaths.length - 5} more)` : ""}`,
+    );
   }
 
   if (event.report) {
@@ -54,7 +56,9 @@ export function formatWatchCycle(
     if (total === 0) {
       lines.push("  No changes detected");
     } else {
-      lines.push(`  Changes: ${total} total (${breaking} breaking, ${warning} warning, ${safe} safe)`);
+      lines.push(
+        `  Changes: ${total} total (${breaking} breaking, ${warning} warning, ${safe} safe)`,
+      );
       lines.push("");
       lines.push(formatReport(event.report));
     }

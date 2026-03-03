@@ -103,7 +103,7 @@ export function addTransportOptions(cmd: Command): Command {
     .option("--args <args...>", "Arguments for the server command")
     .option("--url <url>", "Server URL for streamable-http or SSE transport")
     .option("--sse", "Use SSE transport instead of streamable-http (requires --url)")
-    .option("--header <header...>", "Custom headers as \"Key: Value\" (repeatable)")
+    .option("--header <header...>", 'Custom headers as "Key: Value" (repeatable)')
     .option("--config <path>", "Path to mcp.json config file")
     .option("--server <name>", "Server name from config file")
     .option("--env <pairs...>", "Environment variables as KEY=VALUE pairs");

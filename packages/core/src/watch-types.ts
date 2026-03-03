@@ -1,5 +1,4 @@
-import type { DiffReport } from "./diff-types.js";
-import type { Severity } from "./diff-types.js";
+import type { DiffReport, Severity } from "./diff-types.js";
 
 /** Default glob patterns to ignore during file watching. */
 export const DEFAULT_WATCH_IGNORE_PATTERNS: readonly string[] = [
