@@ -80,6 +80,8 @@ export function createCiCommand(): Command {
           server: options["server"] as string | undefined,
           args: options["args"] as string[] | undefined,
           env: options["env"] as string[] | undefined,
+        sse: options["sse"] === true ? true : undefined,
+        header: options["header"] as string[] | undefined,
         };
         const config = resolveTransport(transportOpts);
 
