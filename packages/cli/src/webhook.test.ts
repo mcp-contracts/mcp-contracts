@@ -1,6 +1,6 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import type { WebhookPayload } from "@mcp-contracts/core";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import type { WebhookPayload } from "@mcp-contracts/core";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { sendWebhook } from "./webhook.js";
 
 /** Minimal webhook payload for testing. */

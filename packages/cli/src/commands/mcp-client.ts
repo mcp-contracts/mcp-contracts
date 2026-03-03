@@ -58,17 +58,13 @@ export async function connectToServer(config: ResolvedTransport): Promise<Connec
     if (!config.url) {
       throw new Error("sse transport requires a URL");
     }
-    const sseOpts = config.headers
-      ? { requestInit: { headers: config.headers } }
-      : {};
+    const sseOpts = config.headers ? { requestInit: { headers: config.headers } } : {};
     transport = new SSEClientTransport(new URL(config.url), sseOpts);
   } else {
     if (!config.url) {
       throw new Error("streamable-http transport requires a URL");
     }
-    const httpOpts = config.headers
-      ? { requestInit: { headers: config.headers } }
-      : undefined;
+    const httpOpts = config.headers ? { requestInit: { headers: config.headers } } : undefined;
     transport = httpOpts
       ? new StreamableHTTPClientTransport(new URL(config.url), httpOpts)
       : new StreamableHTTPClientTransport(new URL(config.url));

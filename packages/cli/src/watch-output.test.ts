@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
 import type { DiffReport, WatchDiffEvent } from "@mcp-contracts/core";
-import { clearScreen, formatWatchCycle, formatWatchError, formatWatchHeader } from "./watch-output.js";
+import { describe, expect, it } from "vitest";
+import {
+  clearScreen,
+  formatWatchCycle,
+  formatWatchError,
+  formatWatchHeader,
+} from "./watch-output.js";
 
 describe("formatWatchHeader", () => {
   it("includes baseline path, watch paths, and debounce", () => {
@@ -16,20 +21,32 @@ describe("formatWatchHeader", () => {
 describe("formatWatchCycle", () => {
   const mockReport: DiffReport = {
     meta: {
-      before: { serverName: "a", serverVersion: "1.0.0", contentHash: "sha256:aaa", capturedAt: "2026-01-01T00:00:00Z" },
-      after: { serverName: "a", serverVersion: "1.0.0", contentHash: "sha256:bbb", capturedAt: "2026-01-01T00:01:00Z" },
+      before: {
+        serverName: "a",
+        serverVersion: "1.0.0",
+        contentHash: "sha256:aaa",
+        capturedAt: "2026-01-01T00:00:00Z",
+      },
+      after: {
+        serverName: "a",
+        serverVersion: "1.0.0",
+        contentHash: "sha256:bbb",
+        capturedAt: "2026-01-01T00:01:00Z",
+      },
       generatedAt: "2026-01-01T00:01:00Z",
       tool: "mcpdiff",
     },
     summary: { breaking: 1, warning: 0, safe: 0, total: 1 },
-    changes: [{
-      id: "tool.x.removed",
-      category: "tool",
-      name: "x",
-      severity: "breaking",
-      type: "removed",
-      message: "Tool removed",
-    }],
+    changes: [
+      {
+        id: "tool.x.removed",
+        category: "tool",
+        name: "x",
+        severity: "breaking",
+        type: "removed",
+        message: "Tool removed",
+      },
+    ],
   };
 
   it("formats a cycle with changes", () => {

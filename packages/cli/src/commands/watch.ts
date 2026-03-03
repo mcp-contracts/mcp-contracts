@@ -1,6 +1,12 @@
 import { watch } from "node:fs/promises";
 import { resolve } from "node:path";
-import type { Severity, WatchDiffEvent } from "@mcp-contracts/core";
+import type {
+  DiffReport,
+  MCPContractSnapshot,
+  Severity,
+  WatchConfig,
+  WatchDiffEvent,
+} from "@mcp-contracts/core";
 import {
   createWatchConfig,
   createWebhookPayload,
@@ -13,7 +19,12 @@ import { Command } from "commander";
 import type { TransportOptions } from "../transport.js";
 import { addTransportOptions, resolveTransport } from "../transport.js";
 import { handleErrors, readSnapshotFile } from "../utils.js";
-import { clearScreen, formatWatchCycle, formatWatchError, formatWatchHeader } from "../watch-output.js";
+import {
+  clearScreen,
+  formatWatchCycle,
+  formatWatchError,
+  formatWatchHeader,
+} from "../watch-output.js";
 import { sendWebhook } from "../webhook.js";
 import { captureSnapshot } from "./capture.js";
 
@@ -57,6 +68,51 @@ function shouldIgnore(filePath: string, patterns: string[]): boolean {
 }
 
 /**
+ * Sends a webhook notification for a diff report if configured.
+ *
+ * @param webhookUrl - The URL to POST to, or undefined to skip.
+ * @param report - The diff report to send.
+ * @param baselinePath - Path to the baseline snapshot file.
+ */
+async function maybeSendWebhook(
+  webhookUrl: string | undefined,
+  report: DiffReport,
+  baselinePath: string,
+): Promise<void> {
+  if (!webhookUrl) return;
+  const payload = createWebhookPayload(report, {
+    trigger: "watch",
+    baselinePath,
+  });
+  const result = await sendWebhook(webhookUrl, payload);
+  if (!result.success) {
+    process.stderr.write(`Warning: Webhook failed: ${result.error}\n`);
+  }
+}
+
+/**
+ * Checks if a diff report contains changes above the fail threshold and warns.
+ *
+ * @param baseline - The baseline snapshot.
+ * @param current - The current snapshot.
+ * @param config - Watch configuration.
+ * @param quiet - Whether to suppress output.
+ */
+function checkFailThreshold(
+  baseline: MCPContractSnapshot,
+  current: MCPContractSnapshot,
+  config: WatchConfig,
+  quiet: boolean,
+): void {
+  const fullReport = diffSnapshots(baseline, current);
+  const failThreshold = SEVERITY_ORDER[config.failOn];
+  const hasFailure = fullReport.changes.some((c) => SEVERITY_ORDER[c.severity] >= failThreshold);
+  if (hasFailure && !quiet) {
+    process.stderr.write("Breaking changes detected!\n");
+  }
+}
+
+/**
  * Creates the `watch` subcommand for the mcpdiff CLI.
  *
  * Watches for file changes and re-snapshots a live MCP server on each change,
@@ -90,7 +146,8 @@ export function createWatchCommand(): Command {
         const watchPaths = options.watchPaths as string[];
         const baselinePath = options.baseline as string;
         const webhookUrl = options.webhook as string | undefined;
-        const shouldClear = options.clear === true || (options.clear === undefined && process.stdout.isTTY);
+        const shouldClear =
+          options.clear === true || (options.clear === undefined && process.stdout.isTTY);
 
         const config = createWatchConfig({
           debounceMs,
@@ -158,29 +215,8 @@ export function createWatchCommand(): Command {
 
             process.stdout.write(formatWatchCycle(event, formatTerminal));
 
-            // Send webhook if configured
-            if (webhookUrl && report) {
-              const payload = createWebhookPayload(report, {
-                trigger: "watch",
-                baselinePath,
-              });
-              const result = await sendWebhook(webhookUrl, payload);
-              if (!result.success) {
-                process.stderr.write(`Warning: Webhook failed: ${result.error}\n`);
-              }
-            }
-
-            // Check fail threshold
-            if (report) {
-              const fullReport = diffSnapshots(baseline, current);
-              const failThreshold = SEVERITY_ORDER[config.failOn];
-              const hasFailure = fullReport.changes.some(
-                (c) => SEVERITY_ORDER[c.severity] >= failThreshold,
-              );
-              if (hasFailure && !quiet) {
-                process.stderr.write("Breaking changes detected!\n");
-              }
-            }
+            await maybeSendWebhook(webhookUrl, report, baselinePath);
+            checkFailThreshold(baseline, current, config, quiet);
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             event = {
@@ -196,9 +232,7 @@ export function createWatchCommand(): Command {
 
         // Start watching
         const resolvedPaths = watchPaths.map((p) => resolve(p));
-        const watchers = resolvedPaths.map((p) =>
-          watch(p, { recursive: true, signal: ac.signal }),
-        );
+        const watchers = resolvedPaths.map((p) => watch(p, { recursive: true, signal: ac.signal }));
 
         try {
           // Use Promise.race of all watchers to handle events

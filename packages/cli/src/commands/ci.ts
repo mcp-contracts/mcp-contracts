@@ -60,7 +60,6 @@ export function createCiCommand(): Command {
     .option("--severity <level>", "Minimum severity to display", "safe")
     .option("--webhook <url>", "POST diff results to a webhook URL")
     .action(
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: orchestration function
       handleErrors(async (options: Record<string, unknown>) => {
         const rootOpts = getRootOpts(cmd);
         const quiet = rootOpts["quiet"] === true;

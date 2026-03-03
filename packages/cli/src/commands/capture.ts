@@ -55,9 +55,7 @@ export async function captureSnapshot(options: CaptureOptions): Promise<CaptureR
   };
 
   const source =
-    config.transport === "stdio"
-      ? [config.command, ...(config.args ?? [])].join(" ")
-      : config.url;
+    config.transport === "stdio" ? [config.command, ...(config.args ?? [])].join(" ") : config.url;
 
   const capture: SnapshotCapture = {
     transport: config.transport,
