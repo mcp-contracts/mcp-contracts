@@ -1,10 +1,8 @@
-import type { SnapshotCapture, SnapshotServer } from "@mcp-contracts/core";
-import { createSnapshot } from "@mcp-contracts/core";
 import { Command } from "commander";
 import type { TransportOptions } from "../transport.js";
 import { addTransportOptions, resolveTransport } from "../transport.js";
 import { handleErrors, writeOutput } from "../utils.js";
-import { captureServerData, connectToServer } from "./mcp-client.js";
+import { captureSnapshot } from "./capture.js";
 
 /**
  * Creates the `snapshot` subcommand for the mcpdiff CLI.
@@ -34,49 +32,7 @@ export function createSnapshotCommand(): Command {
       };
       const config = resolveTransport(transportOpts);
 
-      if (!quiet) {
-        process.stderr.write("Connecting to MCP server...\n");
-      }
-
-      const { client, transport, protocolVersion } = await connectToServer(config);
-
-      const serverVersion = client.getServerVersion();
-      const serverCapabilities = client.getServerCapabilities() ?? {};
-
-      if (!quiet && serverVersion) {
-        process.stderr.write(`Connected to ${serverVersion.name} v${serverVersion.version}\n`);
-      }
-
-      const data = await captureServerData(client);
-
-      await transport.close();
-
-      const server: SnapshotServer = {
-        name: serverVersion?.name ?? "unknown",
-        version: serverVersion?.version ?? "unknown",
-        protocolVersion,
-        capabilities: serverCapabilities as Record<string, unknown>,
-      };
-
-      const source =
-        config.transport === "stdio"
-          ? [config.command, ...(config.args ?? [])].join(" ")
-          : config.url;
-
-      const capture: SnapshotCapture = {
-        transport: config.transport,
-        source,
-        tool: "mcpdiff/0.1.0",
-      };
-
-      const snapshot = createSnapshot({
-        server,
-        tools: data.tools,
-        resources: data.resources,
-        resourceTemplates: data.resourceTemplates,
-        prompts: data.prompts,
-        capture,
-      });
+      const { snapshot } = await captureSnapshot({ transport: config, quiet });
 
       const prettyPrint = outputPath !== undefined || process.stdout.isTTY;
       const json = prettyPrint ? JSON.stringify(snapshot, null, 2) : JSON.stringify(snapshot);
