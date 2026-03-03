@@ -46,3 +46,5 @@ export type {
   ToolContract,
 } from "./types.js";
 export { SNAPSHOT_VERSION } from "./types.js";
+export type { WebhookPayload, WebhookSource, WebhookTrigger } from "./webhook-types.js";
+export { createWebhookPayload } from "./webhook-types.js";
