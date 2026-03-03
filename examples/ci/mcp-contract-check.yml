@@ -65,3 +65,31 @@ jobs:
       # Optional: fail on warnings too (stricter)
       # - name: Strict check
       #   run: mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node dist/index.js" --fail-on warning
+
+      # Optional: send results to Slack, PagerDuty, or any HTTP endpoint
+      # - name: Check with webhook
+      #   run: mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node dist/index.js" --webhook ${{ secrets.WEBHOOK_URL }}
+
+  # ── Option C: Watch mode for staging/production monitoring ─
+  # Run on a schedule to continuously verify a deployed server.
+  # contract-watch:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: "20"
+  #
+  #     - name: Install mcpdiff
+  #       run: npm install -g @mcp-contracts/cli
+  #
+  #     - name: Watch deployed server
+  #       run: |
+  #         mcpdiff diff --live contracts/baseline.mcpc.json \
+  #           --url https://mcp.example.com/sse --sse \
+  #           --webhook ${{ secrets.SLACK_WEBHOOK_URL }}
+  #       # For periodic monitoring, trigger this workflow on a cron schedule:
+  #       # on:
+  #       #   schedule:
+  #       #     - cron: "0 */6 * * *"  # every 6 hours
