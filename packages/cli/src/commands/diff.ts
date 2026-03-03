@@ -1,5 +1,6 @@
 import type { MCPContractSnapshot, Severity } from "@mcp-contracts/core";
 import {
+  createWebhookPayload,
   diffSnapshots,
   formatJson,
   formatMarkdown,
@@ -17,6 +18,7 @@ import {
   stripAnsi,
   writeOutput,
 } from "../utils.js";
+import { sendWebhook } from "../webhook.js";
 import { captureSnapshot } from "./capture.js";
 
 const VALID_SEVERITIES = new Set<string>(["safe", "warning", "breaking"]);
@@ -89,7 +91,8 @@ export function createDiffCommand(): Command {
     .argument("[after]", "Path to updated snapshot file (not needed with --live)")
     .option("--live", "Diff baseline against a live server instead of a file")
     .option("--severity <level>", "Minimum severity to display: safe | warning | breaking", "safe")
-    .option("--fail-on <level>", "Exit code 1 threshold: safe | warning | breaking", "breaking");
+    .option("--fail-on <level>", "Exit code 1 threshold: safe | warning | breaking", "breaking")
+    .option("--webhook <url>", "POST diff results to a webhook URL");
 
   addTransportOptions(cmd);
 
@@ -130,6 +133,20 @@ export function createDiffCommand(): Command {
         }
 
         writeOutput(`${output}\n`, outputPath);
+
+        // Send webhook if configured
+        const webhookUrl = options.webhook as string | undefined;
+        if (webhookUrl) {
+          const trigger = live ? "cli" : "cli";
+          const payload = createWebhookPayload(report, {
+            trigger,
+            baselinePath: beforePath,
+          });
+          const result = await sendWebhook(webhookUrl, payload);
+          if (!result.success) {
+            process.stderr.write(`Warning: Webhook failed: ${result.error}\n`);
+          }
+        }
 
         // Determine exit code using unfiltered diff
         const fullReport = diffSnapshots(before, after);

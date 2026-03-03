@@ -1,6 +1,7 @@
 import { appendFileSync } from "node:fs";
 import type { Severity } from "@mcp-contracts/core";
 import {
+  createWebhookPayload,
   diffSnapshots,
   formatJson,
   formatMarkdown,
@@ -19,6 +20,7 @@ import {
   stripAnsi,
   writeOutput,
 } from "../utils.js";
+import { sendWebhook } from "../webhook.js";
 import { captureSnapshot } from "./capture.js";
 
 const VALID_SEVERITIES = new Set<string>(["safe", "warning", "breaking"]);
@@ -56,6 +58,7 @@ export function createCiCommand(): Command {
     .requiredOption("--baseline <path>", "Path to baseline snapshot (required)")
     .option("--fail-on <level>", "Severity threshold for exit code 1", "breaking")
     .option("--severity <level>", "Minimum severity to display", "safe")
+    .option("--webhook <url>", "POST diff results to a webhook URL")
     .action(
       // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: orchestration function
       handleErrors(async (options: Record<string, unknown>) => {
@@ -120,6 +123,19 @@ export function createCiCommand(): Command {
         if (ciEnv.stepSummaryPath) {
           const markdown = formatMarkdown(report);
           appendFileSync(ciEnv.stepSummaryPath, `${markdown}\n`);
+        }
+
+        // Send webhook if configured
+        const webhookUrl = options.webhook as string | undefined;
+        if (webhookUrl) {
+          const payload = createWebhookPayload(report, {
+            trigger: "ci",
+            baselinePath: options.baseline as string,
+          });
+          const webhookResult = await sendWebhook(webhookUrl, payload);
+          if (!webhookResult.success) {
+            process.stderr.write(`Warning: Webhook failed: ${webhookResult.error}\n`);
+          }
         }
 
         // Determine exit code using unfiltered diff

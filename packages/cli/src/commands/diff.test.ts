@@ -206,6 +206,24 @@ describe("diff command", () => {
     }
     expect(stdoutData).toContain("## MCP Contract Diff");
   });
+
+  it("warns on webhook failure without affecting exit code", async () => {
+    const program = createProgram();
+    await program.parseAsync([
+      "node",
+      "mcpdiff",
+      "--format",
+      "json",
+      "diff",
+      V1,
+      V1,
+      "--webhook",
+      "http://localhost:1/unreachable",
+    ]);
+    // Webhook should fail but command succeeds
+    expect(exitCode).toBeUndefined();
+    expect(stderrData).toContain("Warning: Webhook failed");
+  });
 });
 
 describe("diff --live", () => {

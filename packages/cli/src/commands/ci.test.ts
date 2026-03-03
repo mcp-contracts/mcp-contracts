@@ -280,4 +280,25 @@ describe("ci command", () => {
     expect(exitCode).toBe(2);
     expect(stderrData).toContain("Specify one of");
   });
+
+  it("warns on webhook failure without affecting exit code", async () => {
+    const baselinePath = createMockBaseline();
+    const program = createProgram();
+    await program.parseAsync([
+      "node",
+      "mcpdiff",
+      "--format",
+      "json",
+      "ci",
+      "--baseline",
+      baselinePath,
+      "--command",
+      "node",
+      "--webhook",
+      "http://localhost:1/unreachable",
+    ]);
+    // Webhook should fail but command succeeds (no breaking changes)
+    expect(exitCode).toBeUndefined();
+    expect(stderrData).toContain("Warning: Webhook failed");
+  });
 });
