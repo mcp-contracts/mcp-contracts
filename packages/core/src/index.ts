@@ -46,5 +46,11 @@ export type {
   ToolContract,
 } from "./types.js";
 export { SNAPSHOT_VERSION } from "./types.js";
+export type {
+  CreateWatchConfigOptions,
+  WatchConfig,
+  WatchDiffEvent,
+} from "./watch-types.js";
+export { createWatchConfig, DEFAULT_WATCH_IGNORE_PATTERNS } from "./watch-types.js";
 export type { WebhookPayload, WebhookSource, WebhookTrigger } from "./webhook-types.js";
 export { createWebhookPayload } from "./webhook-types.js";
