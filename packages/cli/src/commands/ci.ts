@@ -1,7 +1,7 @@
 import { appendFileSync } from "node:fs";
-import type { Severity, SnapshotCapture, SnapshotServer } from "@mcp-contracts/core";
+import type { Severity } from "@mcp-contracts/core";
 import {
-  createSnapshot,
+  createWebhookPayload,
   diffSnapshots,
   formatJson,
   formatMarkdown,
@@ -20,7 +20,8 @@ import {
   stripAnsi,
   writeOutput,
 } from "../utils.js";
-import { captureServerData, connectToServer } from "./mcp-client.js";
+import { sendWebhook } from "../webhook.js";
+import { captureSnapshot } from "./capture.js";
 
 const VALID_SEVERITIES = new Set<string>(["safe", "warning", "breaking"]);
 
@@ -57,8 +58,8 @@ export function createCiCommand(): Command {
     .requiredOption("--baseline <path>", "Path to baseline snapshot (required)")
     .option("--fail-on <level>", "Severity threshold for exit code 1", "breaking")
     .option("--severity <level>", "Minimum severity to display", "safe")
+    .option("--webhook <url>", "POST diff results to a webhook URL")
     .action(
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: orchestration function
       handleErrors(async (options: Record<string, unknown>) => {
         const rootOpts = getRootOpts(cmd);
         const quiet = rootOpts.quiet === true;
@@ -69,10 +70,8 @@ export function createCiCommand(): Command {
         const severity = parseSeverity(options.severity as string, "--severity");
         const failOn = parseSeverity(options.failOn as string, "--fail-on");
 
-        // Read baseline
         const baseline = readSnapshotFile(options.baseline as string);
 
-        // Resolve transport and connect
         const transportOpts: TransportOptions = {
           command: options.command as string | undefined,
           url: options.url as string | undefined,
@@ -80,52 +79,12 @@ export function createCiCommand(): Command {
           server: options.server as string | undefined,
           args: options.args as string[] | undefined,
           env: options.env as string[] | undefined,
+          sse: options.sse === true ? true : undefined,
+          header: options.header as string[] | undefined,
         };
         const config = resolveTransport(transportOpts);
 
-        if (!quiet) {
-          process.stderr.write("Connecting to MCP server...\n");
-        }
-
-        const { client, transport, protocolVersion } = await connectToServer(config);
-
-        const serverVersion = client.getServerVersion();
-        const serverCapabilities = client.getServerCapabilities() ?? {};
-
-        if (!quiet && serverVersion) {
-          process.stderr.write(`Connected to ${serverVersion.name} v${serverVersion.version}\n`);
-        }
-
-        const data = await captureServerData(client);
-        await transport.close();
-
-        // Create current snapshot
-        const server: SnapshotServer = {
-          name: serverVersion?.name ?? "unknown",
-          version: serverVersion?.version ?? "unknown",
-          protocolVersion,
-          capabilities: serverCapabilities as Record<string, unknown>,
-        };
-
-        const source =
-          config.transport === "stdio"
-            ? [config.command, ...(config.args ?? [])].join(" ")
-            : config.url;
-
-        const capture: SnapshotCapture = {
-          transport: config.transport,
-          source,
-          tool: "mcpdiff/0.1.0",
-        };
-
-        const current = createSnapshot({
-          server,
-          tools: data.tools,
-          resources: data.resources,
-          resourceTemplates: data.resourceTemplates,
-          prompts: data.prompts,
-          capture,
-        });
+        const { snapshot: current } = await captureSnapshot({ transport: config, quiet });
 
         // Diff
         const report = diffSnapshots(baseline, current, { minSeverity: severity });
@@ -163,6 +122,19 @@ export function createCiCommand(): Command {
         if (ciEnv.stepSummaryPath) {
           const markdown = formatMarkdown(report);
           appendFileSync(ciEnv.stepSummaryPath, `${markdown}\n`);
+        }
+
+        // Send webhook if configured
+        const webhookUrl = options.webhook as string | undefined;
+        if (webhookUrl) {
+          const payload = createWebhookPayload(report, {
+            trigger: "ci",
+            baselinePath: options.baseline as string,
+          });
+          const webhookResult = await sendWebhook(webhookUrl, payload);
+          if (!webhookResult.success) {
+            process.stderr.write(`Warning: Webhook failed: ${webhookResult.error}\n`);
+          }
         }
 
         // Determine exit code using unfiltered diff

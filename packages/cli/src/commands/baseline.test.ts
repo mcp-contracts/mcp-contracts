@@ -1,37 +1,40 @@
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
+import { createSnapshot } from "@mcp-contracts/core";
 import { Command } from "commander";
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { createBaselineCommand } from "./baseline.js";
 
-vi.mock("./mcp-client.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./mcp-client.js")>();
-  return {
-    ...actual,
-    connectToServer: vi.fn().mockResolvedValue({
-      client: {
-        getServerVersion: () => ({ name: "test-server", version: "1.0.0" }),
-        getServerCapabilities: () => ({ tools: {}, resources: {}, prompts: {} }),
-      },
-      transport: {
-        close: vi.fn().mockResolvedValue(undefined),
-      },
+/** Creates a snapshot matching the mock captureSnapshot output. */
+function makeMockSnapshot() {
+  return createSnapshot({
+    server: {
+      name: "test-server",
+      version: "1.0.0",
       protocolVersion: "2025-03-26",
-    }),
-    captureServerData: vi.fn().mockResolvedValue({
-      tools: [
-        {
-          name: "test_tool",
-          description: "A test tool",
-          inputSchema: { type: "object", properties: {} },
-        },
-      ],
-      resources: [],
-      resourceTemplates: [],
-      prompts: [],
-    }),
-  };
-});
+      capabilities: {},
+    },
+    tools: [
+      {
+        name: "test_tool",
+        description: "A test tool",
+        inputSchema: { type: "object", properties: {} },
+      },
+    ],
+    resources: [],
+    resourceTemplates: [],
+    prompts: [],
+    capture: { transport: "stdio", source: "node", tool: "mcpdiff/0.1.0" },
+  });
+}
+
+vi.mock("./capture.js", () => ({
+  captureSnapshot: vi.fn().mockImplementation(async () => ({
+    snapshot: makeMockSnapshot(),
+    serverName: "test-server",
+    serverVersion: "1.0.0",
+  })),
+}));
 
 const TMP_DIR = resolve(import.meta.dirname, "__tmp_baseline_test");
 

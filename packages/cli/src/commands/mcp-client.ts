@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { RawPrompt, RawResource, RawResourceTemplate, RawTool } from "@mcp-contracts/core";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import {
   getDefaultEnvironment,
   StdioClientTransport,
@@ -11,11 +12,12 @@ import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
 
 /** Resolved transport configuration for connecting to an MCP server. */
 export interface ResolvedTransport {
-  transport: "stdio" | "streamable-http";
+  transport: "stdio" | "streamable-http" | "sse";
   command?: string;
   args?: string[];
   env?: Record<string, string>;
   url?: string;
+  headers?: Record<string, string>;
 }
 
 /** Data captured from a live MCP server. */
@@ -52,11 +54,20 @@ export async function connectToServer(config: ResolvedTransport): Promise<Connec
       args: config.args,
       env: { ...getDefaultEnvironment(), ...config.env },
     });
+  } else if (config.transport === "sse") {
+    if (!config.url) {
+      throw new Error("sse transport requires a URL");
+    }
+    const sseOpts = config.headers ? { requestInit: { headers: config.headers } } : {};
+    transport = new SSEClientTransport(new URL(config.url), sseOpts);
   } else {
     if (!config.url) {
       throw new Error("streamable-http transport requires a URL");
     }
-    transport = new StreamableHTTPClientTransport(new URL(config.url));
+    const httpOpts = config.headers ? { requestInit: { headers: config.headers } } : undefined;
+    transport = httpOpts
+      ? new StreamableHTTPClientTransport(new URL(config.url), httpOpts)
+      : new StreamableHTTPClientTransport(new URL(config.url));
   }
 
   await client.connect(transport, { signal: AbortSignal.timeout(30_000) });

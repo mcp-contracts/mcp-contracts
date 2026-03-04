@@ -1,12 +1,11 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import type { SnapshotCapture, SnapshotServer } from "@mcp-contracts/core";
-import { createSnapshot, diffSnapshots } from "@mcp-contracts/core";
+import { diffSnapshots } from "@mcp-contracts/core";
 import { Command } from "commander";
 import type { TransportOptions } from "../transport.js";
 import { addTransportOptions, resolveTransport } from "../transport.js";
 import { CliExitError, handleErrors, readSnapshotFile, writeOutput } from "../utils.js";
-import { captureServerData, connectToServer } from "./mcp-client.js";
+import { captureSnapshot } from "./capture.js";
 
 const DEFAULT_BASELINE_PATH = "contracts/baseline.mcpc.json";
 
@@ -53,51 +52,12 @@ export function createBaselineUpdateCommand(): Command {
         server: options.server as string | undefined,
         args: options.args as string[] | undefined,
         env: options.env as string[] | undefined,
+        sse: options.sse === true ? true : undefined,
+        header: options.header as string[] | undefined,
       };
       const config = resolveTransport(transportOpts);
 
-      if (!quiet) {
-        process.stderr.write("Connecting to MCP server...\n");
-      }
-
-      const { client, transport, protocolVersion } = await connectToServer(config);
-
-      const serverVersion = client.getServerVersion();
-      const serverCapabilities = client.getServerCapabilities() ?? {};
-
-      if (!quiet && serverVersion) {
-        process.stderr.write(`Connected to ${serverVersion.name} v${serverVersion.version}\n`);
-      }
-
-      const data = await captureServerData(client);
-      await transport.close();
-
-      const server: SnapshotServer = {
-        name: serverVersion?.name ?? "unknown",
-        version: serverVersion?.version ?? "unknown",
-        protocolVersion,
-        capabilities: serverCapabilities as Record<string, unknown>,
-      };
-
-      const source =
-        config.transport === "stdio"
-          ? [config.command, ...(config.args ?? [])].join(" ")
-          : config.url;
-
-      const capture: SnapshotCapture = {
-        transport: config.transport,
-        source,
-        tool: "mcpdiff/0.1.0",
-      };
-
-      const snapshot = createSnapshot({
-        server,
-        tools: data.tools,
-        resources: data.resources,
-        resourceTemplates: data.resourceTemplates,
-        prompts: data.prompts,
-        capture,
-      });
+      const { snapshot } = await captureSnapshot({ transport: config, quiet });
 
       mkdirSync(dirname(outputPath), { recursive: true });
       const json = JSON.stringify(snapshot, null, 2);
@@ -127,7 +87,6 @@ export function createBaselineVerifyCommand(): Command {
   addTransportOptions(cmd);
 
   cmd.option("--baseline <path>", "Path to baseline file", DEFAULT_BASELINE_PATH).action(
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: orchestration function
     handleErrors(async (options: Record<string, unknown>) => {
       const rootOpts = getRootOpts(cmd);
       const quiet = rootOpts.quiet === true;
@@ -142,51 +101,12 @@ export function createBaselineVerifyCommand(): Command {
         server: options.server as string | undefined,
         args: options.args as string[] | undefined,
         env: options.env as string[] | undefined,
+        sse: options.sse === true ? true : undefined,
+        header: options.header as string[] | undefined,
       };
       const config = resolveTransport(transportOpts);
 
-      if (!quiet) {
-        process.stderr.write("Connecting to MCP server...\n");
-      }
-
-      const { client, transport, protocolVersion } = await connectToServer(config);
-
-      const serverVersion = client.getServerVersion();
-      const serverCapabilities = client.getServerCapabilities() ?? {};
-
-      if (!quiet && serverVersion) {
-        process.stderr.write(`Connected to ${serverVersion.name} v${serverVersion.version}\n`);
-      }
-
-      const data = await captureServerData(client);
-      await transport.close();
-
-      const server: SnapshotServer = {
-        name: serverVersion?.name ?? "unknown",
-        version: serverVersion?.version ?? "unknown",
-        protocolVersion,
-        capabilities: serverCapabilities as Record<string, unknown>,
-      };
-
-      const source =
-        config.transport === "stdio"
-          ? [config.command, ...(config.args ?? [])].join(" ")
-          : config.url;
-
-      const capture: SnapshotCapture = {
-        transport: config.transport,
-        source,
-        tool: "mcpdiff/0.1.0",
-      };
-
-      const current = createSnapshot({
-        server,
-        tools: data.tools,
-        resources: data.resources,
-        resourceTemplates: data.resourceTemplates,
-        prompts: data.prompts,
-        capture,
-      });
+      const { snapshot: current } = await captureSnapshot({ transport: config, quiet });
 
       if (baseline.contentHash === current.contentHash) {
         if (!quiet) {

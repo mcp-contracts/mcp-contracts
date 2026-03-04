@@ -5,53 +5,9 @@ import { Command } from "commander";
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { createCiCommand } from "./ci.js";
 
-vi.mock("./mcp-client.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./mcp-client.js")>();
-  return {
-    ...actual,
-    connectToServer: vi.fn().mockResolvedValue({
-      client: {
-        getServerVersion: () => ({ name: "test-server", version: "1.0.0" }),
-        getServerCapabilities: () => ({ tools: {}, resources: {}, prompts: {} }),
-      },
-      transport: {
-        close: vi.fn().mockResolvedValue(undefined),
-      },
-      protocolVersion: "2025-03-26",
-    }),
-    captureServerData: vi.fn().mockResolvedValue({
-      tools: [
-        {
-          name: "test_tool",
-          description: "A test tool",
-          inputSchema: { type: "object", properties: {} },
-        },
-      ],
-      resources: [],
-      resourceTemplates: [],
-      prompts: [],
-    }),
-  };
-});
-
-const TMP_DIR = resolve(import.meta.dirname, "__tmp_ci_test");
-const FIXTURES_DIR = resolve(import.meta.dirname, "../../../core/src/__fixtures__");
-
-function createProgram(): Command {
-  const program = new Command();
-  program
-    .option("--format <format>", "Output format")
-    .option("--no-color", "Disable colored output")
-    .option("-o, --output <path>", "Output file path")
-    .option("--quiet", "Suppress non-essential output")
-    .option("--verbose", "Show detailed information");
-  program.addCommand(createCiCommand());
-  return program;
-}
-
-/** Creates a baseline snapshot from the mock server data for testing. */
-function createMockBaseline(): string {
-  const snapshot = createSnapshot({
+/** Creates a snapshot matching the mock captureSnapshot output. */
+function makeMockSnapshot() {
+  return createSnapshot({
     server: {
       name: "test-server",
       version: "1.0.0",
@@ -70,6 +26,34 @@ function createMockBaseline(): string {
     prompts: [],
     capture: { transport: "stdio", source: "node", tool: "mcpdiff/0.1.0" },
   });
+}
+
+vi.mock("./capture.js", () => ({
+  captureSnapshot: vi.fn().mockImplementation(async () => ({
+    snapshot: makeMockSnapshot(),
+    serverName: "test-server",
+    serverVersion: "1.0.0",
+  })),
+}));
+
+const TMP_DIR = resolve(import.meta.dirname, "__tmp_ci_test");
+const FIXTURES_DIR = resolve(import.meta.dirname, "../../../core/src/__fixtures__");
+
+function createProgram(): Command {
+  const program = new Command();
+  program
+    .option("--format <format>", "Output format")
+    .option("--no-color", "Disable colored output")
+    .option("-o, --output <path>", "Output file path")
+    .option("--quiet", "Suppress non-essential output")
+    .option("--verbose", "Show detailed information");
+  program.addCommand(createCiCommand());
+  return program;
+}
+
+/** Creates a baseline snapshot from the mock server data for testing. */
+function createMockBaseline(): string {
+  const snapshot = makeMockSnapshot();
   const filePath = resolve(TMP_DIR, "baseline.mcpc.json");
   writeFileSync(filePath, JSON.stringify(snapshot, null, 2), "utf-8");
   return filePath;
@@ -295,5 +279,26 @@ describe("ci command", () => {
     }
     expect(exitCode).toBe(2);
     expect(stderrData).toContain("Specify one of");
+  });
+
+  it("warns on webhook failure without affecting exit code", async () => {
+    const baselinePath = createMockBaseline();
+    const program = createProgram();
+    await program.parseAsync([
+      "node",
+      "mcpdiff",
+      "--format",
+      "json",
+      "ci",
+      "--baseline",
+      baselinePath,
+      "--command",
+      "node",
+      "--webhook",
+      "http://localhost:1/unreachable",
+    ]);
+    // Webhook should fail but command succeeds (no breaking changes)
+    expect(exitCode).toBeUndefined();
+    expect(stderrData).toContain("Warning: Webhook failed");
   });
 });
