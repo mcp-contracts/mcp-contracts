@@ -20,9 +20,8 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
-          registry-url: https://registry.npmjs.org
 
       - run: pnpm install --frozen-lockfile
 
@@ -32,14 +31,17 @@ jobs:
 
       - run: pnpm -r test
 
-      - name: Publish to npm
-        run: pnpm -r publish --access public --no-git-checks --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish @mcp-contracts/core to npm
+        run: npm publish --access public --provenance
+        working-directory: packages/core
+
+      - name: Publish @mcp-contracts/cli to npm
+        run: npm publish --access public --provenance
+        working-directory: packages/cli
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://npm.pkg.github.com
           scope: '@mcp-contracts'
 
