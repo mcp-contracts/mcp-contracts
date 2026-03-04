@@ -7,8 +7,18 @@
  * @see SPEC.md section 1 for the full specification.
  */
 
-/** JSON Schema type — we use a loose type here since JSON Schema is complex. */
-export type JSONSchema = Record<string, unknown>;
+/** JSON Schema type with known properties for type-safe access, plus an index signature for the rest. */
+export interface JSONSchema {
+  type?: string | string[];
+  properties?: Record<string, JSONSchema>;
+  required?: string[];
+  additionalProperties?: boolean | JSONSchema;
+  description?: string;
+  default?: unknown;
+  format?: string;
+  enum?: unknown[];
+  [key: string]: unknown;
+}
 
 /** Information about the MCP server, as reported during initialization. */
 export interface SnapshotServer {

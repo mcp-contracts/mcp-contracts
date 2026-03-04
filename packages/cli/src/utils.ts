@@ -35,32 +35,43 @@ export function readSnapshotFile(filePath: string): MCPContractSnapshot {
 
   const obj = data as Record<string, unknown>;
 
-  if (typeof obj.snapshotVersion !== "string") {
+  if (typeof obj["snapshotVersion"] !== "string") {
     throw new Error(`Snapshot file "${filePath}" is missing "snapshotVersion"`);
   }
 
-  if (typeof obj.server !== "object" || obj.server === null) {
+  if (typeof obj["server"] !== "object" || obj["server"] === null) {
     throw new Error(`Snapshot file "${filePath}" is missing "server" object`);
   }
 
-  const server = obj.server as Record<string, unknown>;
-  if (typeof server.name !== "string") {
+  const server = obj["server"] as Record<string, unknown>;
+  if (typeof server["name"] !== "string") {
     throw new Error(`Snapshot file "${filePath}" is missing "server.name"`);
   }
 
-  if (typeof obj.tools !== "object" || obj.tools === null || Array.isArray(obj.tools)) {
+  if (typeof obj["tools"] !== "object" || obj["tools"] === null || Array.isArray(obj["tools"])) {
     throw new Error(`Snapshot file "${filePath}" is missing "tools" object`);
   }
 
-  if (typeof obj.resources !== "object" || obj.resources === null || Array.isArray(obj.resources)) {
+  if (
+    typeof obj["resources"] !== "object" ||
+    obj["resources"] === null ||
+    Array.isArray(obj["resources"])
+  ) {
     throw new Error(`Snapshot file "${filePath}" is missing "resources" object`);
   }
 
-  if (typeof obj.prompts !== "object" || obj.prompts === null || Array.isArray(obj.prompts)) {
+  if (
+    typeof obj["prompts"] !== "object" ||
+    obj["prompts"] === null ||
+    Array.isArray(obj["prompts"])
+  ) {
     throw new Error(`Snapshot file "${filePath}" is missing "prompts" object`);
   }
 
-  if (typeof obj.contentHash !== "string" || !obj.contentHash.startsWith("sha256:")) {
+  if (
+    typeof obj["contentHash"] !== "string" ||
+    !(obj["contentHash"] as string).startsWith("sha256:")
+  ) {
     throw new Error(
       `Snapshot file "${filePath}" has invalid "contentHash" (expected "sha256:..." format)`,
     );

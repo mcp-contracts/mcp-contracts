@@ -61,25 +61,25 @@ export function createCiCommand(): Command {
       // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: orchestration function
       handleErrors(async (options: Record<string, unknown>) => {
         const rootOpts = getRootOpts(cmd);
-        const quiet = rootOpts.quiet === true;
-        const noColor = rootOpts.color === false;
-        const outputPath = rootOpts.output as string | undefined;
-        const explicitFormat = rootOpts.format as string | undefined;
+        const quiet = rootOpts["quiet"] === true;
+        const noColor = rootOpts["color"] === false;
+        const outputPath = rootOpts["output"] as string | undefined;
+        const explicitFormat = rootOpts["format"] as string | undefined;
 
-        const severity = parseSeverity(options.severity as string, "--severity");
-        const failOn = parseSeverity(options.failOn as string, "--fail-on");
+        const severity = parseSeverity(options["severity"] as string, "--severity");
+        const failOn = parseSeverity(options["failOn"] as string, "--fail-on");
 
         // Read baseline
-        const baseline = readSnapshotFile(options.baseline as string);
+        const baseline = readSnapshotFile(options["baseline"] as string);
 
         // Resolve transport and connect
         const transportOpts: TransportOptions = {
-          command: options.command as string | undefined,
-          url: options.url as string | undefined,
-          config: options.config as string | undefined,
-          server: options.server as string | undefined,
-          args: options.args as string[] | undefined,
-          env: options.env as string[] | undefined,
+          command: options["command"] as string | undefined,
+          url: options["url"] as string | undefined,
+          config: options["config"] as string | undefined,
+          server: options["server"] as string | undefined,
+          args: options["args"] as string[] | undefined,
+          env: options["env"] as string[] | undefined,
         };
         const config = resolveTransport(transportOpts);
 

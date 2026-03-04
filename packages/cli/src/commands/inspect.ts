@@ -199,14 +199,14 @@ export function createInspectCommand(): Command {
       handleErrors(async (snapshotPath: string, options: Record<string, unknown>) => {
         const snapshot = readSnapshotFile(snapshotPath);
         const parentOpts = cmd.parent?.opts() ?? {};
-        const format = resolveFormat(parentOpts.format as string | undefined);
-        const noColor = parentOpts.color === false;
-        const outputPath = parentOpts.output as string | undefined;
+        const format = resolveFormat(parentOpts["format"] as string | undefined);
+        const noColor = parentOpts["color"] === false;
+        const outputPath = parentOpts["output"] as string | undefined;
 
         let output: string;
 
-        if (options.schema) {
-          const toolName = options.schema as string;
+        if (options["schema"]) {
+          const toolName = options["schema"] as string;
           const tool = snapshot.tools[toolName];
           if (!tool) {
             throw new Error(
@@ -214,11 +214,11 @@ export function createInspectCommand(): Command {
             );
           }
           output = JSON.stringify(tool.inputSchema, null, 2);
-        } else if (options.tools) {
+        } else if (options["tools"]) {
           output = formatTools(snapshot, format);
-        } else if (options.resources) {
+        } else if (options["resources"]) {
           output = formatResources(snapshot, format);
-        } else if (options.prompts) {
+        } else if (options["prompts"]) {
           output = formatPrompts(snapshot, format);
         } else if (format === "json") {
           output = formatSummaryJson(snapshot);

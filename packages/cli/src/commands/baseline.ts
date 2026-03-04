@@ -43,16 +43,16 @@ export function createBaselineUpdateCommand(): Command {
   cmd.action(
     handleErrors(async (options: Record<string, unknown>) => {
       const rootOpts = getRootOpts(cmd);
-      const quiet = rootOpts.quiet === true;
-      const outputPath = (rootOpts.output as string | undefined) ?? DEFAULT_BASELINE_PATH;
+      const quiet = rootOpts["quiet"] === true;
+      const outputPath = (rootOpts["output"] as string | undefined) ?? DEFAULT_BASELINE_PATH;
 
       const transportOpts: TransportOptions = {
-        command: options.command as string | undefined,
-        url: options.url as string | undefined,
-        config: options.config as string | undefined,
-        server: options.server as string | undefined,
-        args: options.args as string[] | undefined,
-        env: options.env as string[] | undefined,
+        command: options["command"] as string | undefined,
+        url: options["url"] as string | undefined,
+        config: options["config"] as string | undefined,
+        server: options["server"] as string | undefined,
+        args: options["args"] as string[] | undefined,
+        env: options["env"] as string[] | undefined,
       };
       const config = resolveTransport(transportOpts);
 
@@ -130,18 +130,18 @@ export function createBaselineVerifyCommand(): Command {
     // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: orchestration function
     handleErrors(async (options: Record<string, unknown>) => {
       const rootOpts = getRootOpts(cmd);
-      const quiet = rootOpts.quiet === true;
-      const baselinePath = (options.baseline as string) ?? DEFAULT_BASELINE_PATH;
+      const quiet = rootOpts["quiet"] === true;
+      const baselinePath = (options["baseline"] as string) ?? DEFAULT_BASELINE_PATH;
 
       const baseline = readSnapshotFile(baselinePath);
 
       const transportOpts: TransportOptions = {
-        command: options.command as string | undefined,
-        url: options.url as string | undefined,
-        config: options.config as string | undefined,
-        server: options.server as string | undefined,
-        args: options.args as string[] | undefined,
-        env: options.env as string[] | undefined,
+        command: options["command"] as string | undefined,
+        url: options["url"] as string | undefined,
+        config: options["config"] as string | undefined,
+        server: options["server"] as string | undefined,
+        args: options["args"] as string[] | undefined,
+        env: options["env"] as string[] | undefined,
       };
       const config = resolveTransport(transportOpts);
 

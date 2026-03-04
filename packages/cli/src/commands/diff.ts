@@ -47,16 +47,16 @@ export function createDiffCommand(): Command {
     .action(
       handleErrors(
         async (beforePath: string, afterPath: string, options: Record<string, unknown>) => {
-          const severity = parseSeverity(options.severity as string, "--severity");
-          const failOn = parseSeverity(options.failOn as string, "--fail-on");
+          const severity = parseSeverity(options["severity"] as string, "--severity");
+          const failOn = parseSeverity(options["failOn"] as string, "--fail-on");
 
           const before = readSnapshotFile(beforePath);
           const after = readSnapshotFile(afterPath);
 
           const parentOpts = cmd.parent?.opts() ?? {};
-          const format = resolveFormat(parentOpts.format as string | undefined);
-          const noColor = parentOpts.color === false;
-          const outputPath = parentOpts.output as string | undefined;
+          const format = resolveFormat(parentOpts["format"] as string | undefined);
+          const noColor = parentOpts["color"] === false;
+          const outputPath = parentOpts["output"] as string | undefined;
 
           const report = diffSnapshots(before, after, { minSeverity: severity });
 

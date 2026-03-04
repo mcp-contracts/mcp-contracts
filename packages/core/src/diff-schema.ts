@@ -455,32 +455,24 @@ function diffAdditionalProperties(
 }
 
 /**
- * Diffs two JSON Schemas for a single tool's input or output and produces SchemaChange entries.
+ * Detects parameters that were added in the new schema.
  *
- * @param toolName - The tool name (for change IDs and messages).
- * @param beforeSchema - The old schema.
- * @param afterSchema - The new schema.
- * @param schemaKind - "inputSchema" or "outputSchema".
- * @param basePath - The base path prefix for nested recursion.
- * @returns Array of detected schema changes.
+ * @param toolName - The tool name.
+ * @param basePath - The base path prefix.
+ * @param afterProps - The new schema properties.
+ * @param beforePropNames - Set of property names in the old schema.
+ * @param afterRequired - Set of required properties in the new schema.
+ * @returns Array of added-parameter changes.
  */
-export function diffSchemas(
+function diffAddedProperties(
   toolName: string,
-  beforeSchema: JSONSchema,
-  afterSchema: JSONSchema,
-  schemaKind: "inputSchema" | "outputSchema",
-  basePath = schemaKind,
+  basePath: string,
+  afterProps: Record<string, JSONSchema>,
+  beforePropNames: Set<string>,
+  afterRequired: Set<string>,
 ): SchemaChange[] {
   const changes: SchemaChange[] = [];
-  const beforeProps = (beforeSchema.properties ?? {}) as Record<string, JSONSchema>;
-  const afterProps = (afterSchema.properties ?? {}) as Record<string, JSONSchema>;
-  const beforeRequired = new Set((beforeSchema.required ?? []) as string[]);
-  const afterRequired = new Set((afterSchema.required ?? []) as string[]);
-  const beforePropNames = new Set(Object.keys(beforeProps));
-  const afterPropNames = new Set(Object.keys(afterProps));
-
-  // Parameter added
-  for (const prop of afterPropNames) {
+  for (const prop of Object.keys(afterProps)) {
     if (beforePropNames.has(prop)) continue;
     const isRequired = afterRequired.has(prop);
     changes.push({
@@ -496,9 +488,28 @@ export function diffSchemas(
       after: afterProps[prop],
     });
   }
+  return changes;
+}
 
-  // Parameter removed
-  for (const prop of beforePropNames) {
+/**
+ * Detects parameters that were removed from the old schema.
+ *
+ * @param toolName - The tool name.
+ * @param basePath - The base path prefix.
+ * @param beforeProps - The old schema properties.
+ * @param afterPropNames - Set of property names in the new schema.
+ * @param beforeRequired - Set of required properties in the old schema.
+ * @returns Array of removed-parameter changes.
+ */
+function diffRemovedProperties(
+  toolName: string,
+  basePath: string,
+  beforeProps: Record<string, JSONSchema>,
+  afterPropNames: Set<string>,
+  beforeRequired: Set<string>,
+): SchemaChange[] {
+  const changes: SchemaChange[] = [];
+  for (const prop of Object.keys(beforeProps)) {
     if (afterPropNames.has(prop)) continue;
     const wasRequired = beforeRequired.has(prop);
     changes.push({
@@ -514,9 +525,40 @@ export function diffSchemas(
       before: beforeProps[prop],
     });
   }
+  return changes;
+}
+
+/**
+ * Diffs two JSON Schemas for a single tool's input or output and produces SchemaChange entries.
+ *
+ * @param toolName - The tool name (for change IDs and messages).
+ * @param beforeSchema - The old schema.
+ * @param afterSchema - The new schema.
+ * @param schemaKind - "inputSchema" or "outputSchema".
+ * @param basePath - The base path prefix for nested recursion.
+ * @returns Array of detected schema changes.
+ */
+export function diffSchemas(
+  toolName: string,
+  beforeSchema: JSONSchema,
+  afterSchema: JSONSchema,
+  schemaKind: "inputSchema" | "outputSchema",
+  basePath: string = schemaKind,
+): SchemaChange[] {
+  const beforeProps = (beforeSchema.properties ?? {}) as Record<string, JSONSchema>;
+  const afterProps = (afterSchema.properties ?? {}) as Record<string, JSONSchema>;
+  const beforeRequired = new Set((beforeSchema.required ?? []) as string[]);
+  const afterRequired = new Set((afterSchema.required ?? []) as string[]);
+  const beforePropNames = new Set(Object.keys(beforeProps));
+  const afterPropNames = new Set(Object.keys(afterProps));
+
+  const changes: SchemaChange[] = [
+    ...diffAddedProperties(toolName, basePath, afterProps, beforePropNames, afterRequired),
+    ...diffRemovedProperties(toolName, basePath, beforeProps, afterPropNames, beforeRequired),
+  ];
 
   // Parameter modifications (present in both)
-  for (const prop of beforePropNames) {
+  for (const prop of Object.keys(beforeProps)) {
     if (!afterPropNames.has(prop)) continue;
     const beforeProp = beforeProps[prop];
     const afterProp = afterProps[prop];
@@ -592,25 +634,21 @@ export function diffOutputSchema(
 }
 
 /**
- * Diffs individual fields within two existing output schemas.
+ * Detects output fields that were added in the new schema.
  *
  * @param toolName - The tool name.
- * @param beforeOutput - The old output schema.
- * @param afterOutput - The new output schema.
- * @returns Array of field-level output schema changes.
+ * @param afterProps - The new output properties.
+ * @param beforeProps - The old output properties.
+ * @param afterRequired - Set of required properties in the new schema.
+ * @returns Array of added-field changes.
  */
-function diffOutputSchemaFields(
+function diffAddedOutputFields(
   toolName: string,
-  beforeOutput: JSONSchema,
-  afterOutput: JSONSchema,
+  afterProps: Record<string, JSONSchema>,
+  beforeProps: Record<string, JSONSchema>,
+  afterRequired: Set<string>,
 ): SchemaChange[] {
   const changes: SchemaChange[] = [];
-  const beforeProps = (beforeOutput.properties ?? {}) as Record<string, JSONSchema>;
-  const afterProps = (afterOutput.properties ?? {}) as Record<string, JSONSchema>;
-  const beforeRequired = new Set((beforeOutput.required ?? []) as string[]);
-  const afterRequired = new Set((afterOutput.required ?? []) as string[]);
-
-  // Field added to output
   for (const prop of Object.keys(afterProps)) {
     if (prop in beforeProps) continue;
     changes.push({
@@ -626,8 +664,25 @@ function diffOutputSchemaFields(
       after: afterProps[prop],
     });
   }
+  return changes;
+}
 
-  // Field removed from output
+/**
+ * Detects output fields that were removed from the old schema.
+ *
+ * @param toolName - The tool name.
+ * @param beforeProps - The old output properties.
+ * @param afterProps - The new output properties.
+ * @param beforeRequired - Set of required properties in the old schema.
+ * @returns Array of removed-field changes.
+ */
+function diffRemovedOutputFields(
+  toolName: string,
+  beforeProps: Record<string, JSONSchema>,
+  afterProps: Record<string, JSONSchema>,
+  beforeRequired: Set<string>,
+): SchemaChange[] {
+  const changes: SchemaChange[] = [];
   for (const prop of Object.keys(beforeProps)) {
     if (prop in afterProps) continue;
     changes.push({
@@ -643,8 +698,23 @@ function diffOutputSchemaFields(
       before: beforeProps[prop],
     });
   }
+  return changes;
+}
 
-  // Field type changed in output
+/**
+ * Detects output field type changes between two schemas.
+ *
+ * @param toolName - The tool name.
+ * @param beforeProps - The old output properties.
+ * @param afterProps - The new output properties.
+ * @returns Array of type-changed field changes.
+ */
+function diffModifiedOutputFields(
+  toolName: string,
+  beforeProps: Record<string, JSONSchema>,
+  afterProps: Record<string, JSONSchema>,
+): SchemaChange[] {
+  const changes: SchemaChange[] = [];
   for (const prop of Object.keys(beforeProps)) {
     if (!(prop in afterProps)) continue;
     const bProp = beforeProps[prop];
@@ -666,6 +736,30 @@ function diffOutputSchemaFields(
       });
     }
   }
-
   return changes;
+}
+
+/**
+ * Diffs individual fields within two existing output schemas.
+ *
+ * @param toolName - The tool name.
+ * @param beforeOutput - The old output schema.
+ * @param afterOutput - The new output schema.
+ * @returns Array of field-level output schema changes.
+ */
+function diffOutputSchemaFields(
+  toolName: string,
+  beforeOutput: JSONSchema,
+  afterOutput: JSONSchema,
+): SchemaChange[] {
+  const beforeProps = (beforeOutput.properties ?? {}) as Record<string, JSONSchema>;
+  const afterProps = (afterOutput.properties ?? {}) as Record<string, JSONSchema>;
+  const beforeRequired = new Set((beforeOutput.required ?? []) as string[]);
+  const afterRequired = new Set((afterOutput.required ?? []) as string[]);
+
+  return [
+    ...diffAddedOutputFields(toolName, afterProps, beforeProps, afterRequired),
+    ...diffRemovedOutputFields(toolName, beforeProps, afterProps, beforeRequired),
+    ...diffModifiedOutputFields(toolName, beforeProps, afterProps),
+  ];
 }

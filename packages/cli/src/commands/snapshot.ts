@@ -19,16 +19,16 @@ export function createSnapshotCommand(): Command {
   cmd.action(
     handleErrors(async (options: Record<string, unknown>) => {
       const parentOpts = cmd.parent?.opts() ?? {};
-      const outputPath = parentOpts.output as string | undefined;
-      const quiet = parentOpts.quiet === true;
+      const outputPath = parentOpts["output"] as string | undefined;
+      const quiet = parentOpts["quiet"] === true;
 
       const transportOpts: TransportOptions = {
-        command: options.command as string | undefined,
-        url: options.url as string | undefined,
-        config: options.config as string | undefined,
-        server: options.server as string | undefined,
-        args: options.args as string[] | undefined,
-        env: options.env as string[] | undefined,
+        command: options["command"] as string | undefined,
+        url: options["url"] as string | undefined,
+        config: options["config"] as string | undefined,
+        server: options["server"] as string | undefined,
+        args: options["args"] as string[] | undefined,
+        env: options["env"] as string[] | undefined,
       };
       const config = resolveTransport(transportOpts);
 

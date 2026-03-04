@@ -264,7 +264,7 @@ export function readMcpConfig(
   }
 
   const obj = config as Record<string, unknown>;
-  const servers = obj.mcpServers as Record<string, McpServerConfig> | undefined;
+  const servers = obj["mcpServers"] as Record<string, McpServerConfig> | undefined;
 
   if (!servers || typeof servers !== "object") {
     throw new Error(`Config file "${configPath}" is missing "mcpServers" object`);

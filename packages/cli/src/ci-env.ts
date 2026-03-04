@@ -45,24 +45,24 @@ export function detectCIEnvironment(
   env: Record<string, string | undefined> = process.env,
 ): CIEnvironment {
   // GitHub Actions
-  if (env.GITHUB_ACTIONS === "true") {
-    const isPullRequest = env.GITHUB_EVENT_NAME === "pull_request";
-    const pullRequestNumber = parsePRNumberFromRef(env.GITHUB_REF);
+  if (env["GITHUB_ACTIONS"] === "true") {
+    const isPullRequest = env["GITHUB_EVENT_NAME"] === "pull_request";
+    const pullRequestNumber = parsePRNumberFromRef(env["GITHUB_REF"]);
 
     return {
       isCI: true,
       provider: "github-actions",
       suggestedFormat: "markdown",
-      stepSummaryPath: env.GITHUB_STEP_SUMMARY ?? null,
+      stepSummaryPath: env["GITHUB_STEP_SUMMARY"] ?? null,
       isPullRequest,
       pullRequestNumber,
-      repository: env.GITHUB_REPOSITORY ?? null,
+      repository: env["GITHUB_REPOSITORY"] ?? null,
     };
   }
 
   // GitLab CI
-  if (env.GITLAB_CI === "true") {
-    const mrIid = env.CI_MERGE_REQUEST_IID;
+  if (env["GITLAB_CI"] === "true") {
+    const mrIid = env["CI_MERGE_REQUEST_IID"];
     return {
       isCI: true,
       provider: "gitlab-ci",
@@ -75,8 +75,8 @@ export function detectCIEnvironment(
   }
 
   // CircleCI
-  if (env.CIRCLECI === "true") {
-    const prUrl = env.CIRCLE_PULL_REQUEST;
+  if (env["CIRCLECI"] === "true") {
+    const prUrl = env["CIRCLE_PULL_REQUEST"];
     return {
       isCI: true,
       provider: "circleci",
@@ -89,7 +89,7 @@ export function detectCIEnvironment(
   }
 
   // Generic CI (fallback)
-  if (env.CI === "true") {
+  if (env["CI"] === "true") {
     return {
       isCI: true,
       provider: "generic",
