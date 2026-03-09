@@ -7,16 +7,22 @@
  * @see SPEC.md section 1 for the full specification.
  */
 
-/** JSON Schema type with known properties for type-safe access, plus an index signature for the rest. */
+/** JSON Schema type with well-known keywords and an index signature for the rest. */
 export interface JSONSchema {
   type?: string | string[];
   properties?: Record<string, JSONSchema>;
   required?: string[];
   additionalProperties?: boolean | JSONSchema;
+  enum?: unknown[];
   description?: string;
   default?: unknown;
   format?: string;
-  enum?: unknown[];
+  minimum?: number;
+  maximum?: number;
+  minLength?: number;
+  maxLength?: number;
+  minItems?: number;
+  maxItems?: number;
   [key: string]: unknown;
 }
 

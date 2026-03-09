@@ -70,7 +70,6 @@ export function createCiCommand(): Command {
         const severity = parseSeverity(options["severity"] as string, "--severity");
         const failOn = parseSeverity(options["failOn"] as string, "--fail-on");
 
-        // Read baseline
         const baseline = readSnapshotFile(options["baseline"] as string);
 
         const transportOpts: TransportOptions = {
@@ -126,11 +125,11 @@ export function createCiCommand(): Command {
         }
 
         // Send webhook if configured
-        const webhookUrl = options.webhook as string | undefined;
+        const webhookUrl = options["webhook"] as string | undefined;
         if (webhookUrl) {
           const payload = createWebhookPayload(report, {
             trigger: "ci",
-            baselinePath: options.baseline as string,
+            baselinePath: options["baseline"] as string,
           });
           const webhookResult = await sendWebhook(webhookUrl, payload);
           if (!webhookResult.success) {

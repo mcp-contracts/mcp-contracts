@@ -138,16 +138,16 @@ export function createWatchCommand(): Command {
     .action(
       handleErrors(async (options: Record<string, unknown>) => {
         const parentOpts = cmd.parent?.opts() ?? {};
-        const quiet = parentOpts.quiet === true;
+        const quiet = parentOpts["quiet"] === true;
 
-        const severity = parseSeverity((options.severity as string) ?? "safe", "--severity");
-        const failOn = parseSeverity((options.failOn as string) ?? "breaking", "--fail-on");
-        const debounceMs = Number.parseInt(options.debounce as string, 10);
-        const watchPaths = options.watchPaths as string[];
-        const baselinePath = options.baseline as string;
-        const webhookUrl = options.webhook as string | undefined;
+        const severity = parseSeverity((options["severity"] as string) ?? "safe", "--severity");
+        const failOn = parseSeverity((options["failOn"] as string) ?? "breaking", "--fail-on");
+        const debounceMs = Number.parseInt(options["debounce"] as string, 10);
+        const watchPaths = options["watchPaths"] as string[];
+        const baselinePath = options["baseline"] as string;
+        const webhookUrl = options["webhook"] as string | undefined;
         const shouldClear =
-          options.clear === true || (options.clear === undefined && process.stdout.isTTY);
+          options["clear"] === true || (options["clear"] === undefined && process.stdout.isTTY);
 
         const config = createWatchConfig({
           debounceMs,
@@ -157,14 +157,14 @@ export function createWatchCommand(): Command {
         });
 
         const transportOpts: TransportOptions = {
-          command: options.command as string | undefined,
-          url: options.url as string | undefined,
-          config: options.config as string | undefined,
-          server: options.server as string | undefined,
-          args: options.args as string[] | undefined,
-          env: options.env as string[] | undefined,
-          sse: options.sse === true ? true : undefined,
-          header: options.header as string[] | undefined,
+          command: options["command"] as string | undefined,
+          url: options["url"] as string | undefined,
+          config: options["config"] as string | undefined,
+          server: options["server"] as string | undefined,
+          args: options["args"] as string[] | undefined,
+          env: options["env"] as string[] | undefined,
+          sse: options["sse"] === true ? true : undefined,
+          header: options["header"] as string[] | undefined,
         };
         const transport = resolveTransport(transportOpts);
 

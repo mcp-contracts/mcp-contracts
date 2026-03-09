@@ -60,14 +60,14 @@ async function resolveAfterSnapshot(
   }
 
   const transportOpts: TransportOptions = {
-    command: options.command as string | undefined,
-    url: options.url as string | undefined,
-    config: options.config as string | undefined,
-    server: options.server as string | undefined,
-    args: options.args as string[] | undefined,
-    env: options.env as string[] | undefined,
-    sse: options.sse === true ? true : undefined,
-    header: options.header as string[] | undefined,
+    command: options["command"] as string | undefined,
+    url: options["url"] as string | undefined,
+    config: options["config"] as string | undefined,
+    server: options["server"] as string | undefined,
+    args: options["args"] as string[] | undefined,
+    env: options["env"] as string[] | undefined,
+    sse: options["sse"] === true ? true : undefined,
+    header: options["header"] as string[] | undefined,
   };
 
   const config = resolveTransport(transportOpts);
@@ -103,19 +103,19 @@ export function createDiffCommand(): Command {
         afterPath: string | undefined,
         options: Record<string, unknown>,
       ) => {
-        const severity = parseSeverity(options.severity as string, "--severity");
-        const failOn = parseSeverity(options.failOn as string, "--fail-on");
-        const live = options.live === true;
+        const severity = parseSeverity(options["severity"] as string, "--severity");
+        const failOn = parseSeverity(options["failOn"] as string, "--fail-on");
+        const live = options["live"] === true;
 
         const parentOpts = cmd.parent?.opts() ?? {};
-        const quiet = parentOpts.quiet === true;
+        const quiet = parentOpts["quiet"] === true;
 
         const before = readSnapshotFile(beforePath);
         const after = await resolveAfterSnapshot(afterPath, live, options, quiet);
 
-        const format = resolveFormat(parentOpts.format as string | undefined);
-        const noColor = parentOpts.color === false;
-        const outputPath = parentOpts.output as string | undefined;
+        const format = resolveFormat(parentOpts["format"] as string | undefined);
+        const noColor = parentOpts["color"] === false;
+        const outputPath = parentOpts["output"] as string | undefined;
 
         const report = diffSnapshots(before, after, { minSeverity: severity });
 
@@ -135,7 +135,7 @@ export function createDiffCommand(): Command {
         writeOutput(`${output}\n`, outputPath);
 
         // Send webhook if configured
-        const webhookUrl = options.webhook as string | undefined;
+        const webhookUrl = options["webhook"] as string | undefined;
         if (webhookUrl) {
           const trigger = live ? "cli" : "cli";
           const payload = createWebhookPayload(report, {
