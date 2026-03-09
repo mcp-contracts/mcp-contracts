@@ -177,7 +177,6 @@ The `ci` command auto-detects the CI environment and selects the right output fo
 |---------|-------------|
 | [`@mcp-contracts/core`](./packages/core) | Snapshot types, diff engine, classification logic |
 | [`@mcp-contracts/cli`](./packages/cli) | The `mcpdiff` CLI tool |
-| [`@mcp-contracts/github-action`](./packages/github-action) | GitHub Action for CI integration |
 
 ---
 
