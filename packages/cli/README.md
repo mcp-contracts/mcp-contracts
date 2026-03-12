@@ -13,7 +13,7 @@ npm install -g @mcp-contracts/cli
 Or run directly with npx:
 
 ```bash
-npx mcpdiff snapshot --command "node server.js" -o snapshot.mcpc.json
+npx @mcp-contracts/cli snapshot --command "node server.js" -o snapshot.mcpc.json
 ```
 
 ## Commands

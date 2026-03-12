@@ -20,17 +20,17 @@ MCP servers expose tools, resources, and prompts to AI agents. These interfaces 
 
 ```bash
 # Capture a baseline snapshot of your MCP server
-npx mcpdiff baseline update --command "node ./my-server/dist/index.js"
+npx @mcp-contracts/cli baseline update --command "node ./my-server/dist/index.js"
 # → writes contracts/baseline.mcpc.json
 
 # Later, verify nothing has changed
-npx mcpdiff baseline verify --command "node ./my-server/dist/index.js"
+npx @mcp-contracts/cli baseline verify --command "node ./my-server/dist/index.js"
 
 # Or diff two snapshots manually
-npx mcpdiff snapshot --command "node ./my-server/dist/index.js" -o v1.mcpc.json
+npx @mcp-contracts/cli snapshot --command "node ./my-server/dist/index.js" -o v1.mcpc.json
 # ... make changes ...
-npx mcpdiff snapshot --command "node ./my-server/dist/index.js" -o v2.mcpc.json
-npx mcpdiff diff v1.mcpc.json v2.mcpc.json
+npx @mcp-contracts/cli snapshot --command "node ./my-server/dist/index.js" -o v2.mcpc.json
+npx @mcp-contracts/cli diff v1.mcpc.json v2.mcpc.json
 ```
 
 Output:
