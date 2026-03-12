@@ -50,9 +50,9 @@ The diff tool is useful locally, but the real impact comes when it runs automati
 - Prints diff in real time during development — instant feedback on schema changes
 - Useful during local development to see the impact of code changes on the tool contract
 
-### Webhook / Notification Support
-- `mcpdiff diff ... --webhook <url>` — POST the diff report as JSON to a webhook on completion
-- Enables integration with Slack, Discord, PagerDuty, or custom alerting systems
+### Webhook Support
+- `mcpdiff diff ... --webhook <url>` — POST the diff report as JSON to any HTTP endpoint on completion
+- Sends the raw diff report as a generic JSON payload — suitable for custom receivers, CI pipelines, or middleware that forwards to other services
 - Pairs with live diff for production monitoring: "alert me when the production schema drifts"
 
 ---
@@ -194,6 +194,11 @@ These are ideas we're tracking but haven't committed to a milestone. They may be
 - The June 2025 spec added structured tool outputs
 - As adoption grows, output schema diffing becomes equally important to input schema diffing
 - The diff engine already supports this but the real-world coverage is limited — revisit when more servers declare output schemas
+
+### Notification Service Formatting
+- Built-in formatting for popular notification services: Slack (Block Kit), Discord (embeds), PagerDuty (events API)
+- Could be a `--webhook-format slack|discord|pagerduty` flag or auto-detection based on the webhook URL
+- Builds on the generic webhook from v0.3.0 — the raw JSON payload is already sent, this adds service-specific presentation
 
 ### Dashboard / Web UI
 - A web interface for browsing contracts, viewing diffs, and monitoring server drift

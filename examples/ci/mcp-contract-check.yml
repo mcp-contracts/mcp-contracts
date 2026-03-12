@@ -66,7 +66,7 @@ jobs:
       # - name: Strict check
       #   run: mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node dist/index.js" --fail-on warning
 
-      # Optional: send results to Slack, PagerDuty, or any HTTP endpoint
+      # Optional: send results to any HTTP endpoint
       # - name: Check with webhook
       #   run: mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node dist/index.js" --webhook ${{ secrets.WEBHOOK_URL }}
 
@@ -88,7 +88,7 @@ jobs:
   #       run: |
   #         mcpdiff diff --live contracts/baseline.mcpc.json \
   #           --url https://mcp.example.com/sse --sse \
-  #           --webhook ${{ secrets.SLACK_WEBHOOK_URL }}
+  #           --webhook ${{ secrets.WEBHOOK_URL }}
   #       # For periodic monitoring, trigger this workflow on a cron schedule:
   #       # on:
   #       #   schedule:

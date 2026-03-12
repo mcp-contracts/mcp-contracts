@@ -171,7 +171,7 @@ node packages/cli/dist/index.js diff \
 node packages/cli/dist/index.js ci \
   --baseline contracts/baseline.mcpc.json \
   --command node --args dist/index.js \
-  --webhook https://hooks.slack.com/services/XXX
+  --webhook https://your-receiver.example.com/webhook
 
 # Webhook on watch (fires on every re-diff)
 node packages/cli/dist/index.js watch \
