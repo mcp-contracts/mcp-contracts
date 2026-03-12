@@ -32,11 +32,15 @@ jobs:
       - run: pnpm -r test
 
       - name: Publish @mcp-contracts/core to npm
-        run: npm publish --access public --provenance
+        run: |
+          pnpm pack
+          npm publish *.tgz --access public --provenance
         working-directory: packages/core
 
       - name: Publish @mcp-contracts/cli to npm
-        run: npm publish --access public --provenance
+        run: |
+          pnpm pack
+          npm publish *.tgz --access public --provenance
         working-directory: packages/cli
 
       - uses: actions/setup-node@v6
