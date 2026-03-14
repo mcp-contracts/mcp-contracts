@@ -68,10 +68,7 @@ export function readSnapshotFile(filePath: string): MCPContractSnapshot {
     throw new Error(`Snapshot file "${filePath}" is missing "prompts" object`);
   }
 
-  if (
-    typeof obj["contentHash"] !== "string" ||
-    !(obj["contentHash"] as string).startsWith("sha256:")
-  ) {
+  if (typeof obj["contentHash"] !== "string" || !obj["contentHash"].startsWith("sha256:")) {
     throw new Error(
       `Snapshot file "${filePath}" has invalid "contentHash" (expected "sha256:..." format)`,
     );

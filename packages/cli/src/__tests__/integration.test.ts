@@ -41,6 +41,7 @@ describe("integration: CLI", () => {
       expect(stdout).toContain("inspect");
       expect(stdout).toContain("baseline");
       expect(stdout).toContain("ci");
+      expect(stdout).toContain("watch");
     });
   });
 
@@ -48,7 +49,7 @@ describe("integration: CLI", () => {
     it("exits 0 and prints version", async () => {
       const { stdout, exitCode } = await runCli("--version");
       expect(exitCode).toBe(0);
-      expect(stdout.trim()).toBe("0.2.0");
+      expect(stdout.trim()).toBe("0.3.0");
     });
   });
 
@@ -150,6 +151,15 @@ describe("integration: CLI", () => {
       expect(exitCode).toBe(2);
       expect(stderr).toContain("Error");
     });
+
+    it("diff --help shows --live and --webhook options", async () => {
+      const { stdout, exitCode } = await runCli("diff", "--help");
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("--live");
+      expect(stdout).toContain("--webhook");
+      expect(stdout).toContain("--sse");
+      expect(stdout).toContain("--header");
+    });
   });
 
   describe("baseline", () => {
@@ -166,6 +176,8 @@ describe("integration: CLI", () => {
       expect(stdout).toContain("--command");
       expect(stdout).toContain("--url");
       expect(stdout).toContain("--config");
+      expect(stdout).toContain("--sse");
+      expect(stdout).toContain("--header");
     });
 
     it("mcpdiff baseline verify --help shows transport and baseline options", async () => {
@@ -178,7 +190,7 @@ describe("integration: CLI", () => {
   });
 
   describe("ci", () => {
-    it("mcpdiff ci --help shows baseline, transport, and fail-on options", async () => {
+    it("mcpdiff ci --help shows baseline, transport, fail-on, and webhook options", async () => {
       const { stdout, exitCode } = await runCli("ci", "--help");
       expect(exitCode).toBe(0);
       expect(stdout).toContain("--baseline");
@@ -186,6 +198,34 @@ describe("integration: CLI", () => {
       expect(stdout).toContain("--url");
       expect(stdout).toContain("--fail-on");
       expect(stdout).toContain("--severity");
+      expect(stdout).toContain("--webhook");
+    });
+  });
+
+  describe("snapshot", () => {
+    it("mcpdiff snapshot --help shows --sse and --header options", async () => {
+      const { stdout, exitCode } = await runCli("snapshot", "--help");
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("--sse");
+      expect(stdout).toContain("--header");
+    });
+  });
+
+  describe("watch", () => {
+    it("mcpdiff watch --help shows all watch options", async () => {
+      const { stdout, exitCode } = await runCli("watch", "--help");
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("--baseline");
+      expect(stdout).toContain("--watch-paths");
+      expect(stdout).toContain("--debounce");
+      expect(stdout).toContain("--severity");
+      expect(stdout).toContain("--fail-on");
+      expect(stdout).toContain("--webhook");
+      expect(stdout).toContain("--clear");
+      expect(stdout).toContain("--command");
+      expect(stdout).toContain("--url");
+      expect(stdout).toContain("--sse");
+      expect(stdout).toContain("--header");
     });
   });
 });

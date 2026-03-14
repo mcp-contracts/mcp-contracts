@@ -85,6 +85,57 @@ set -e
 rm -rf "$TMPDIR"
 echo ""
 
+# ── Step 7: Live diff ─────────────────────────────────────
+echo "━━━ Step 7: Live diff (baseline file → live server) ━━━"
+echo ""
+echo "  Diffing v1 baseline against a live v2 server in one command..."
+$CLI diff --live "$SNAPSHOTS/v1.0.0.mcpc.json" \
+  --command node --args "$SCRIPT_DIR/v2/server.js" || true
+echo ""
+
+# ── Step 8: Webhook notification ──────────────────────────
+echo "━━━ Step 8: Webhook notification ━━━"
+echo ""
+
+WEBHOOK_RECEIVER="$REPO_ROOT/examples/webhook-receiver/server.js"
+WEBHOOK_URL="http://localhost:8089/webhook"
+
+echo "  Starting webhook receiver on port 8089..."
+PORT=8089 node "$WEBHOOK_RECEIVER" &
+WEBHOOK_PID=$!
+sleep 0.5
+
+echo "  Running diff with --webhook..."
+$CLI diff "$SNAPSHOTS/v1.0.0.mcpc.json" "$SNAPSHOTS/v2.0.0.mcpc.json" \
+  --webhook "$WEBHOOK_URL" --quiet || true
+
+sleep 0.5
+echo ""
+echo "  Stopping webhook receiver..."
+kill $WEBHOOK_PID 2>/dev/null || true
+wait $WEBHOOK_PID 2>/dev/null || true
+echo ""
+
+# ── Step 9: Watch mode hint ───────────────────────────────
+echo "━━━ Step 9: Watch mode (interactive — not run automatically) ━━━"
+echo ""
+echo "  Watch mode re-diffs your server whenever source files change."
+echo "  Try it yourself:"
+echo ""
+echo "    $CLI watch \\"
+echo "      --command node --args $SCRIPT_DIR/v1/server.js \\"
+echo "      --baseline $SNAPSHOTS/v1.0.0.mcpc.json \\"
+echo "      --watch-paths $SCRIPT_DIR \\"
+echo "      --clear"
+echo ""
+echo "  With webhook notifications:"
+echo ""
+echo "    $CLI watch \\"
+echo "      --command node --args $SCRIPT_DIR/v1/server.js \\"
+echo "      --baseline $SNAPSHOTS/v1.0.0.mcpc.json \\"
+echo "      --webhook http://localhost:8080/webhook"
+echo ""
+
 echo "━━━ Done! ━━━"
 echo ""
 echo "Try it yourself:"

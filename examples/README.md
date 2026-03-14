@@ -119,9 +119,110 @@ The contacts server simulates a realistic version upgrade with multiple change t
 
 This gives you a realistic example hitting all three severity levels.
 
+## Live Diff
+
+Diff a baseline snapshot against a live server in one command — no need to capture a second snapshot first:
+
+```bash
+# Diff baseline file against a live stdio server
+node packages/cli/dist/index.js diff --live \
+  examples/contacts-server/snapshots/v1.0.0.mcpc.json \
+  --command node --args examples/contacts-server/v2/server.js
+
+# Diff baseline against a remote SSE server with custom headers
+node packages/cli/dist/index.js diff --live \
+  contracts/baseline.mcpc.json \
+  --url https://mcp.example.com/sse --sse \
+  --header "Authorization: Bearer $TOKEN"
+```
+
+## Watch Mode
+
+Re-diffs your server automatically whenever source files change — ideal during development:
+
+```bash
+# Watch for changes and re-diff
+node packages/cli/dist/index.js watch \
+  --command node --args examples/contacts-server/v1/server.js \
+  --baseline examples/contacts-server/snapshots/v1.0.0.mcpc.json \
+  --watch-paths examples/contacts-server/ \
+  --clear
+
+# Watch with webhook notifications on each change
+node packages/cli/dist/index.js watch \
+  --command node --args src/server.js \
+  --baseline contracts/baseline.mcpc.json \
+  --webhook http://localhost:8080/webhook \
+  --debounce 1000
+```
+
+## Webhooks
+
+Send diff results to any HTTP endpoint. Works with `diff`, `ci`, and `watch`:
+
+```bash
+# Webhook on diff
+node packages/cli/dist/index.js diff \
+  examples/contacts-server/snapshots/v1.0.0.mcpc.json \
+  examples/contacts-server/snapshots/v2.0.0.mcpc.json \
+  --webhook http://localhost:8080/webhook
+
+# Webhook on ci
+node packages/cli/dist/index.js ci \
+  --baseline contracts/baseline.mcpc.json \
+  --command node --args dist/index.js \
+  --webhook https://your-receiver.example.com/webhook
+
+# Webhook on watch (fires on every re-diff)
+node packages/cli/dist/index.js watch \
+  --command node --args src/server.js \
+  --baseline contracts/baseline.mcpc.json \
+  --webhook http://localhost:8080/webhook
+```
+
+### Webhook Receiver
+
+A minimal webhook receiver is included for testing. It pretty-prints every payload it receives:
+
+```bash
+node examples/webhook-receiver/server.js
+# → Listening on http://localhost:8080
+
+# In another terminal:
+node packages/cli/dist/index.js diff \
+  examples/contacts-server/snapshots/v1.0.0.mcpc.json \
+  examples/contacts-server/snapshots/v2.0.0.mcpc.json \
+  --webhook http://localhost:8080/webhook
+```
+
+Set a custom port with `PORT=9090 node examples/webhook-receiver/server.js`.
+
+## SSE Transport & Custom Headers
+
+Connect to remote MCP servers over SSE with optional authentication headers:
+
+```bash
+# Snapshot a remote SSE server
+node packages/cli/dist/index.js snapshot \
+  --url https://mcp.example.com/sse --sse
+
+# With custom headers (repeatable)
+node packages/cli/dist/index.js snapshot \
+  --url https://mcp.example.com/sse --sse \
+  --header "Authorization: Bearer $TOKEN" \
+  --header "X-Custom: value"
+
+# CI check against an SSE server
+node packages/cli/dist/index.js ci \
+  --baseline contracts/baseline.mcpc.json \
+  --url https://mcp.example.com/sse --sse \
+  --header "Authorization: Bearer $TOKEN"
+```
+
 ## Example: CI Usage
 
-See `examples/ci/` for GitHub Actions workflow examples showing two approaches:
+See `examples/ci/` for GitHub Actions workflow examples showing three approaches:
 
 - **GitHub Action** — one-step integration with PR comments and step summary
 - **`mcpdiff ci` CLI** — works in any CI system (GitHub, GitLab, CircleCI, etc.)
+- **Scheduled monitoring** — use `mcpdiff diff --live` on a cron to watch deployed servers
