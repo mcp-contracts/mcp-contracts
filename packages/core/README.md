@@ -39,6 +39,47 @@ console.log(formatTerminal(report));
 - **`diffSnapshots(before, after, options?)`** — Compare two snapshots and classify every change by severity
 - **`computeContentHash(snapshot)`** — Generate a deterministic content hash for a snapshot
 - **`formatTerminal(report)`** / **`formatMarkdown(report)`** / **`formatJson(report)`** — Format a diff report for output
+- **`createWatchConfig(options?)`** — Create a validated watch configuration with defaults
+- **`createWebhookPayload(report, source)`** — Build a structured webhook payload from a diff report
+
+### Watch Types
+
+```typescript
+import {
+  createWatchConfig,
+  DEFAULT_WATCH_IGNORE_PATTERNS,
+  type WatchConfig,
+  type WatchDiffEvent,
+  type CreateWatchConfigOptions,
+} from "@mcp-contracts/core";
+
+// Create config with defaults
+const config = createWatchConfig({
+  debounceMs: 1000,
+  watchPaths: ["src"],
+});
+
+// config.ignorePatterns defaults to DEFAULT_WATCH_IGNORE_PATTERNS:
+// ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/*.mcpc.json"]
+```
+
+### Webhook Types
+
+```typescript
+import {
+  createWebhookPayload,
+  type WebhookPayload,
+  type WebhookSource,
+  type WebhookTrigger,
+} from "@mcp-contracts/core";
+
+const payload = createWebhookPayload(report, {
+  trigger: "ci",
+  baselinePath: "contracts/baseline.mcpc.json",
+  serverSource: "node server.js",
+});
+// → { event: "diff.completed", timestamp, source, report }
+```
 
 ### Change Classification
 
