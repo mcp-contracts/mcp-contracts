@@ -354,14 +354,81 @@ interface DiffReport {
 
 ---
 
-## 5. Future Features (Not for v0.1)
+## 5. Contract Signing & Integrity
 
-These are planned but should NOT be implemented in the initial release. Listed here for context.
+### 5.1 Detached Signature Format (`.mcpc.sig`)
 
-- **Contract signing** — Cryptographic signing of snapshots for integrity verification.
+A detached signature file is a JSON file stored alongside the `.mcpc.json` snapshot. It covers the `contentHash` field, which itself is a SHA-256 of the canonical tools/resources/prompts content.
+
+```typescript
+interface DetachedSignature {
+  /** Format version for the signature file. Currently "1.0.0". */
+  signatureVersion: "1.0.0";
+  /** The cryptographic algorithm used: "Ed25519" or "RSA-PSS-SHA256". */
+  algorithm: "Ed25519" | "RSA-PSS-SHA256";
+  /** The contentHash that was signed (binding reference to the snapshot). */
+  contentHash: string;
+  /** Base64-encoded signature bytes. */
+  signature: string;
+  /** ISO 8601 timestamp of when the signature was created. */
+  signedAt: string;
+}
+```
+
+**File naming convention:** Replace `.mcpc.json` with `.mcpc.sig` (e.g., `baseline.mcpc.json` → `baseline.mcpc.sig`).
+
+### 5.2 Supported Algorithms
+
+| Algorithm | Key Type | Signature | Padding |
+|-----------|----------|-----------|---------|
+| `Ed25519` | Ed25519 | `crypto.sign(null, data, key)` | N/A |
+| `RSA-PSS-SHA256` | RSA (2048+ bits) | `crypto.sign("sha256", data, key)` | RSA_PKCS1_PSS_PADDING |
+
+Key types are auto-detected from the PEM file using `crypto.createPrivateKey()` / `crypto.createPublicKey()`.
+
+### 5.3 Signing Process
+
+1. Read the snapshot file and verify its `contentHash` matches the recomputed hash. Refuse to sign if mismatched.
+2. Detect the algorithm from the private key PEM.
+3. Sign the `contentHash` string (UTF-8 encoded) with the private key.
+4. Write the `DetachedSignature` as a `.mcpc.sig` JSON file.
+
+### 5.4 Verification Process
+
+Verification performs three checks in order:
+
+1. **Content hash integrity** — Recompute the hash from `tools`, `resources`, `prompts` and compare to `snapshot.contentHash`. Fails if the snapshot content was tampered.
+2. **Hash binding** — Compare `snapshot.contentHash` to `signature.contentHash`. Fails if the signature was created for a different snapshot.
+3. **Cryptographic verification** — Verify the signature bytes against the public key. Fails if signed by a different key or if signature bytes were tampered.
+
+### 5.5 Content Hash Verification
+
+`mcpdiff verify-hash` provides a quick integrity check without keys:
+
+1. Recompute the content hash from the snapshot's `tools`, `resources`, and `prompts`.
+2. Compare to the stored `contentHash` field.
+3. Exit 0 if they match, exit 1 if they don't.
+
+### 5.6 CLI Commands
+
+```
+mcpdiff sign <snapshot> --key <private-key-path>
+mcpdiff verify <snapshot> --key <public-key-path> [--signature <sig-path>]
+mcpdiff verify-hash <snapshot>
+```
+
+### 5.7 CI Integration
+
+The `ci` command accepts `--verify-signature` and `--signature-key <path>` to verify the baseline signature before diffing. Falls back to `MCP_SIGNATURE_KEY` environment variable (PEM content or file path).
+
+The GitHub Action accepts `verify-signature` and `signature-key` inputs for the same purpose.
+
+---
+
+## 6. Future Features
+
+These are planned but not yet implemented. Listed here for context.
+
 - **Transparency log** — Append-only history of contract versions.
-- **Live diff** — `mcpdiff diff --live <url> snapshot.mcpc.json` to diff a running server against a pinned contract.
-- **Watch mode** — `mcpdiff watch --command "node server.js"` to re-snapshot on file changes and report diffs.
 - **Contract testing** — Generate and run test suites from contracts (`@mcp-contracts/test` package).
-- **GitHub Action** — `@mcp-contracts/diff-action` for CI integration.
 - **Registry integration** — Publish contracts alongside servers in the MCP Registry.

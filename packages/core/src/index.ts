@@ -20,6 +20,20 @@ export type {
 export { SEVERITY_ORDER } from "./diff-types.js";
 export { formatJson, formatMarkdown, formatTerminal } from "./format.js";
 export { computeContentHash, sortKeys } from "./hash.js";
+export {
+  detectKeyAlgorithm,
+  parseSignatureFile,
+  signContentHash,
+  verifyContentHash,
+  verifySignature,
+} from "./sign.js";
+export type {
+  DetachedSignature,
+  SignatureAlgorithm,
+  VerifyHashResult,
+  VerifySignatureResult,
+} from "./sign-types.js";
+export { SIGNATURE_VERSION } from "./sign-types.js";
 export type {
   CreateSnapshotParams,
   RawPrompt,

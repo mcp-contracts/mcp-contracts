@@ -68,11 +68,17 @@ Compares two snapshots and classifies every change as breaking, warning, or safe
 ```bash
 mcpdiff diff before.mcpc.json after.mcpc.json
 
+# Diff a baseline against a live server
+mcpdiff diff baseline.mcpc.json --live --command "node server.js"
+
 # Fail CI on warnings too (stricter)
 mcpdiff diff before.mcpc.json after.mcpc.json --fail-on warning
 
 # Output as JSON for programmatic use
 mcpdiff diff before.mcpc.json after.mcpc.json --format json
+
+# Send results to a webhook
+mcpdiff diff before.mcpc.json after.mcpc.json --webhook https://example.com/hook
 ```
 
 **Exit codes:** `0` = no breaking changes, `1` = breaking changes detected, `2` = error.
@@ -106,9 +112,70 @@ mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js" --
 
 # Only show breaking changes
 mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js" --severity breaking
+
+# Send results to a webhook
+mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js" --webhook https://example.com/hook
 ```
 
 Auto-detects CI environments (GitHub Actions, GitLab CI, CircleCI) and selects the appropriate output format. Writes to `GITHUB_STEP_SUMMARY` when running in GitHub Actions.
+
+### `mcpdiff watch`
+
+Watch for file changes and re-diff against a baseline on every change. Useful during development.
+
+```bash
+mcpdiff watch --baseline contracts/baseline.mcpc.json --command "node server.js"
+
+# Watch specific paths with custom debounce
+mcpdiff watch --baseline contracts/baseline.mcpc.json --command "node server.js" \
+  --watch-paths src lib --debounce 1000
+
+# Send diffs to a webhook on each cycle
+mcpdiff watch --baseline contracts/baseline.mcpc.json --command "node server.js" \
+  --webhook https://example.com/hook
+```
+
+### `mcpdiff sign`
+
+Signs a snapshot with a private key, producing a detached `.mcpc.sig` file.
+
+```bash
+# Sign with Ed25519
+mcpdiff sign contracts/baseline.mcpc.json --key ./private.pem
+
+# Sign with RSA
+mcpdiff sign contracts/baseline.mcpc.json --key ./rsa-private.pem
+
+# Write signature to a custom path
+mcpdiff sign snapshot.mcpc.json --key ./private.pem -o custom/path.mcpc.sig
+```
+
+The sign command verifies the content hash before signing — it will refuse to sign a snapshot whose content has been tampered with.
+
+### `mcpdiff verify`
+
+Verifies a snapshot's signature using a public key.
+
+```bash
+# Verify (auto-discovers .mcpc.sig file next to the snapshot)
+mcpdiff verify contracts/baseline.mcpc.json --key ./public.pem
+
+# Explicit signature path
+mcpdiff verify snapshot.mcpc.json --key ./public.pem --signature custom/path.mcpc.sig
+```
+
+Performs three checks: content hash integrity, hash binding (signature matches this snapshot), and cryptographic verification. Exit code 0 on success, 1 on failure.
+
+### `mcpdiff verify-hash`
+
+Quick integrity check — recomputes the content hash and compares to the stored value. No keys needed.
+
+```bash
+mcpdiff verify-hash snapshot.mcpc.json
+
+# JSON output
+mcpdiff verify-hash snapshot.mcpc.json --format json
+```
 
 ### `mcpdiff inspect`
 
@@ -119,6 +186,30 @@ mcpdiff inspect snapshot.mcpc.json
 mcpdiff inspect snapshot.mcpc.json --tools
 mcpdiff inspect snapshot.mcpc.json --schema create_contact
 ```
+
+## Transport Options
+
+All commands that connect to a live server accept these transport options:
+
+```bash
+# SSE transport (instead of default streamable-http)
+mcpdiff snapshot --url http://localhost:3000/sse --sse -o snapshot.mcpc.json
+
+# Custom HTTP headers (repeatable)
+mcpdiff snapshot --url http://localhost:3000/mcp \
+  --header "Authorization: Bearer token" \
+  --header "X-Custom: value" \
+  -o snapshot.mcpc.json
+```
+
+| Flag | Description |
+|------|-------------|
+| `--command <cmd>` | Server command to run via stdio transport |
+| `--url <url>` | Server URL for streamable-http or SSE transport |
+| `--sse` | Use SSE transport instead of streamable-http (requires `--url`) |
+| `--header <header...>` | Custom HTTP headers as `"Key: Value"` (repeatable) |
+| `--config <path>` | Path to `mcp.json` config file |
+| `--server <name>` | Server name from config file |
 
 ## Why Description Changes are Warnings
 
@@ -148,6 +239,9 @@ jobs:
           fail-on: breaking        # or "warning" / "safe"
           comment-on-pr: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: verify baseline signature before diffing
+          verify-signature: true
+          signature-key: ${{ secrets.MCP_PUBLIC_KEY }}
 ```
 
 **Outputs:** `has-changes`, `has-breaking`, `summary`, `exit-code` — use them in subsequent steps.
@@ -167,6 +261,14 @@ jobs:
       - uses: actions/checkout@v4
       - run: npm install -g @mcp-contracts/cli
       - run: mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node dist/index.js"
+
+      # Or with signature verification
+      - run: >
+          mcpdiff ci
+          --baseline contracts/baseline.mcpc.json
+          --command "node dist/index.js"
+          --verify-signature
+          --signature-key ./public.pem
 ```
 
 The `ci` command auto-detects the CI environment and selects the right output format (markdown for GitHub Actions, JSON otherwise). It also writes to `GITHUB_STEP_SUMMARY` automatically.
