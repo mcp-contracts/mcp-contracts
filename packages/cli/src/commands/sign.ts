@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { signContentHash } from "@mcp-contracts/core";
+import { signContentHash, verifyContentHash } from "@mcp-contracts/core";
 import { Command } from "commander";
 import { handleErrors, readSnapshotFile, writeOutput } from "../utils.js";
 
@@ -36,6 +36,14 @@ export function createSignCommand(): Command {
           (rootOpts["output"] as string | undefined) ?? deriveSignaturePath(snapshotPath);
 
         const snapshot = readSnapshotFile(snapshotPath);
+
+        const hashCheck = verifyContentHash(snapshot);
+        if (!hashCheck.valid) {
+          throw new Error(
+            `Content hash mismatch: stored "${hashCheck.expected}" but recomputed "${hashCheck.actual}". ` +
+              "Refusing to sign a snapshot with an invalid content hash.",
+          );
+        }
 
         let keyPem: string;
         try {

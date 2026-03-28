@@ -2,6 +2,8 @@ import { generateKeyPairSync } from "node:crypto";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import type { MCPContractSnapshot } from "@mcp-contracts/core";
+import { computeContentHash } from "@mcp-contracts/core";
 import { Command } from "commander";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSignCommand } from "./sign.js";
@@ -10,6 +12,7 @@ const FIXTURES_DIR = resolve(import.meta.dirname, "../../../core/src/__fixtures_
 const V1_PATH = resolve(FIXTURES_DIR, "server-v1.mcpc.json");
 
 let ed25519PrivatePath: string;
+let validSnapshotPath: string;
 let tmpDir: string;
 
 beforeAll(() => {
@@ -20,6 +23,12 @@ beforeAll(() => {
     ed25519PrivatePath,
     ed.privateKey.export({ type: "pkcs8", format: "pem" }) as string,
   );
+
+  // Create a snapshot with a valid content hash
+  const snapshot = JSON.parse(readFileSync(V1_PATH, "utf-8")) as MCPContractSnapshot;
+  snapshot.contentHash = computeContentHash(snapshot.tools, snapshot.resources, snapshot.prompts);
+  validSnapshotPath = join(tmpDir, "valid.mcpc.json");
+  writeFileSync(validSnapshotPath, JSON.stringify(snapshot, null, 2));
 });
 
 function createProgram(): Command {
@@ -55,13 +64,13 @@ describe("sign command", () => {
   });
 
   it("produces a .mcpc.sig file", async () => {
-    const sigPath = join(tmpDir, "server-v1.mcpc.sig");
+    const sigPath = join(tmpDir, "valid.mcpc.sig");
     const program = createProgram();
     await program.parseAsync([
       "node",
       "mcpdiff",
       "sign",
-      V1_PATH,
+      validSnapshotPath,
       "--key",
       ed25519PrivatePath,
       "-o",
@@ -75,6 +84,18 @@ describe("sign command", () => {
     expect(stderrData).toContain("Signature written to");
   });
 
+  it("refuses to sign a snapshot with invalid content hash", async () => {
+    const program = createProgram();
+    try {
+      await program.parseAsync(["node", "mcpdiff", "sign", V1_PATH, "--key", ed25519PrivatePath]);
+    } catch {
+      // expected process.exit
+    }
+    expect(exitCode).toBe(2);
+    expect(stderrData).toContain("Content hash mismatch");
+    expect(stderrData).toContain("Refusing to sign");
+  });
+
   it("errors when key file is missing", async () => {
     const program = createProgram();
     try {
@@ -82,7 +103,7 @@ describe("sign command", () => {
         "node",
         "mcpdiff",
         "sign",
-        V1_PATH,
+        validSnapshotPath,
         "--key",
         "/nonexistent/key.pem",
       ]);
