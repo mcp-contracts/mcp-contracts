@@ -22,6 +22,8 @@ export {
 } from "./mcp-client.js";
 // Runner
 export { buildSummary, runContractTests } from "./runner.js";
+// Schema conformance
+export { runSchemaConformance } from "./schema-conformance.js";
 // Types
 export type {
   BoundaryCategory,
