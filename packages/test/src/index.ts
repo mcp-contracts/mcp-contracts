@@ -6,6 +6,8 @@
  * @packageDocumentation
  */
 
+// Formatters
+export { formatTestJson, formatTestMarkdown, formatTestTerminal } from "./format.js";
 // MCP client utilities
 export type { CapturedServerData } from "./mcp-client.js";
 export {
@@ -18,6 +20,8 @@ export {
   listServerResourceTemplates,
   listServerTools,
 } from "./mcp-client.js";
+// Runner
+export { buildSummary, runContractTests } from "./runner.js";
 // Types
 export type {
   BoundaryCategory,
