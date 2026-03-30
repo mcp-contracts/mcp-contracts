@@ -6,6 +6,18 @@
  * @packageDocumentation
  */
 
+// MCP client utilities
+export type { CapturedServerData } from "./mcp-client.js";
+export {
+  callServerTool,
+  captureServerData,
+  closeConnection,
+  connectToServer,
+  listServerPrompts,
+  listServerResources,
+  listServerResourceTemplates,
+  listServerTools,
+} from "./mcp-client.js";
 // Types
 export type {
   BoundaryCategory,
