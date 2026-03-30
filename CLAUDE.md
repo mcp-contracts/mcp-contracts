@@ -126,6 +126,10 @@ When tackling a new milestone (e.g., `v0.4.0`):
 6. **Set the milestone on the PR.** Use `gh api repos/mcp-contracts/mcp-contracts/issues/<pr-number> -X PATCH -f milestone=<milestone-number>` since `gh pr create --milestone` expects exact title match.
 7. **GitHub Action repo.** If the milestone includes GitHub Action changes, commit and push a matching branch in the `github-action` repo.
 
+## Versioning
+
+All packages share a single version number, bumped together. The publish workflow is triggered by a `v*` tag and publishes all packages at that version. When preparing a milestone PR, bump all package.json versions to the milestone version (e.g., all packages go to 0.5.0 for the v0.5.0 milestone).
+
 ## Git Workflow
 
 **Commit after every completed task from TASKS.md.** Each task = one commit. No exceptions.
