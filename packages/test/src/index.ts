@@ -6,6 +6,8 @@
  * @packageDocumentation
  */
 
+// Assertions
+export { runJudgeAssertions, runPredicateAssertions } from "./assertions.js";
 // Boundary testing
 export {
   generateBoundaryInputs,
