@@ -425,10 +425,106 @@ The GitHub Action accepts `verify-signature` and `signature-key` inputs for the 
 
 ---
 
-## 6. Future Features
+## 6. Contract Testing (`@mcp-contracts/test`)
+
+The `@mcp-contracts/test` package tests that a live MCP server conforms to its contract. It connects to a server, runs conformance checks, and produces structured test reports.
+
+### 6.1 Test Categories
+
+| Category | What it tests |
+|----------|---------------|
+| **Schema conformance** | Compares live tool/resource/prompt schemas against the contract using the diff engine. Any breaking or warning-level deviation is a failure. |
+| **Boundary inputs** | Auto-generates edge case inputs from each tool's JSON Schema (empty strings, zero/negative numbers, oversized payloads, missing required fields) and verifies the server handles them gracefully (no crashes or timeouts). |
+| **Behavioral assertions** | User-defined predicate functions that validate tool outputs. Also supports a pluggable judge interface for LLM-as-judge evaluation (no LLM dependency shipped). |
+
+### 6.2 CLI
+
+```
+mcp-test run <contract> [options]
+
+Options:
+  --command <cmd>          Server command for stdio transport
+  --args <args...>         Arguments for the server command
+  --url <url>              Server URL for streamable-http transport
+  --sse                    Use SSE transport
+  --header <header...>     Custom headers (Key: Value)
+  --env <pairs...>         Environment variables (KEY=VALUE)
+  --format <format>        Output format: terminal | json | markdown
+  --no-conformance         Skip schema conformance tests
+  --no-boundary            Skip boundary input tests
+  --allow-extra-tools      Allow tools not in the contract
+  --ignore-descriptions    Ignore description differences
+  --skip-tools <names...>  Skip specific tools
+  --timeout <ms>           Global timeout (default: 120000)
+  -o, --output <path>      Write report to file
+
+Exit codes:
+  0 — All tests pass
+  1 — One or more tests failed
+  2 — Tool error (connection failure, invalid contract, etc.)
+```
+
+### 6.3 Vitest/Jest Integration
+
+Custom matchers for use in existing test suites:
+
+```typescript
+import { expect } from "vitest";
+import { setupMatchers, createTestServer } from "@mcp-contracts/test/matchers";
+
+setupMatchers(expect);
+
+const server = createTestServer({ transport: "stdio", command: "node", args: ["server.js"] });
+
+beforeAll(() => server.connect());
+afterAll(() => server.disconnect());
+
+it("conforms to contract", async () => {
+  await expect(server.config).toConformToContract(contract);
+});
+```
+
+### 6.4 Test Report Format (JSON)
+
+```typescript
+interface TestReport {
+  meta: {
+    contractPath: string;
+    serverName: string;
+    serverVersion: string;
+    runAt: string;
+    tool: string;
+  };
+  summary: {
+    total: number;
+    passed: number;
+    failed: number;
+    skipped: number;
+    errors: number;
+    durationMs: number;
+  };
+  results: Array<{
+    id: string;
+    category: "conformance" | "boundary" | "assertion";
+    toolName: string;
+    status: "pass" | "fail" | "skip" | "error";
+    description: string;
+    message?: string;
+    durationMs?: number;
+    input?: Record<string, unknown>;
+    output?: unknown;
+    path?: string;
+    expected?: unknown;
+    actual?: unknown;
+  }>;
+}
+```
+
+---
+
+## 7. Future Features
 
 These are planned but not yet implemented. Listed here for context.
 
 - **Transparency log** — Append-only history of contract versions.
-- **Contract testing** — Generate and run test suites from contracts (`@mcp-contracts/test` package).
 - **Registry integration** — Publish contracts alongside servers in the MCP Registry.
