@@ -43,6 +43,12 @@ jobs:
           npm publish *.tgz --access public --provenance
         working-directory: packages/cli
 
+      - name: Publish @mcp-contracts/test to npm
+        run: |
+          pnpm pack
+          npm publish *.tgz --access public --provenance
+        working-directory: packages/test
+
       - uses: actions/setup-node@v6
         with:
           node-version: 24
