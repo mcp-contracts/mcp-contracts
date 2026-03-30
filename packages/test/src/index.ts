@@ -6,6 +6,12 @@
  * @packageDocumentation
  */
 
+// Boundary testing
+export {
+  generateBoundaryInputs,
+  generateValidBaseInput,
+  runBoundaryTests,
+} from "./boundary-inputs.js";
 // Formatters
 export { formatTestJson, formatTestMarkdown, formatTestTerminal } from "./format.js";
 // MCP client utilities
