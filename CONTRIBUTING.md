@@ -136,11 +136,11 @@ pnpm test -- --watch
 
 ## Project Roadmap
 
-### Phase 1 — Schema Diff Tool (current)
+### Phase 1 — Schema Diff Tool
 Ship `@mcp-contracts/core` and `@mcp-contracts/cli` with snapshot capture, diffing, and inspection.
 
 ### Phase 2 — Contract Testing
-Add `@mcp-contracts/test` for automated contract validation against live servers.
+Ship `@mcp-contracts/test` for automated contract validation against live servers. Includes schema conformance, boundary input testing, behavioral assertions, and Vitest/Jest integration.
 
-### Phase 3 — Ecosystem
-Signing, transparency logs, registry integration, GitHub Action, VS Code extension.
+### Phase 3 — Ecosystem (current)
+Transparency logs, registry integration, VS Code extension.

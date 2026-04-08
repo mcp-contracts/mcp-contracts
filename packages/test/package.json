@@ -1,10 +1,20 @@
 {
-  "name": "@mcp-contracts/cli",
+  "name": "@mcp-contracts/test",
   "version": "0.5.0",
-  "description": "CLI tool for capturing and diffing MCP tool schemas",
+  "description": "Contract conformance testing for MCP servers",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./matchers": {
+      "types": "./dist/matchers.d.ts",
+      "import": "./dist/matchers.js"
+    }
+  },
   "bin": {
-    "mcpdiff": "./dist/index.js"
+    "mcp-test": "./dist/cli.js"
   },
   "files": [
     "dist"
@@ -24,7 +34,6 @@
   "dependencies": {
     "@mcp-contracts/core": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "cli-table3": "^0.6.0",
     "commander": "^14.0.3"
   },
   "devDependencies": {
@@ -33,19 +42,26 @@
     "typescript": "^5.7.0",
     "vitest": "^4.1.0"
   },
+  "peerDependencies": {
+    "vitest": ">=2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
+  },
   "keywords": [
     "mcp",
     "model-context-protocol",
-    "cli",
-    "schema",
-    "diff",
-    "mcpdiff"
+    "contract-testing",
+    "schema-validation",
+    "mcp-test"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/mcp-contracts/mcp-contracts",
-    "directory": "packages/cli"
+    "directory": "packages/test"
   },
   "homepage": "https://github.com/mcp-contracts/mcp-contracts#readme",
   "bugs": {
