@@ -20,6 +20,7 @@ import {
 } from "../utils.js";
 import { sendWebhook } from "../webhook.js";
 import { captureSnapshot } from "./capture.js";
+import { executeCompositionDiff } from "./diff-composition.js";
 
 const VALID_SEVERITIES = new Set<string>(["safe", "warning", "breaking"]);
 
@@ -75,6 +76,74 @@ async function resolveAfterSnapshot(
   return snapshot;
 }
 
+/** Options for running a two-snapshot file/live diff. */
+interface FileDiffOptions {
+  beforePath: string;
+  afterPath: string | undefined;
+  live: boolean;
+  options: Record<string, unknown>;
+  severity: Severity;
+  failOn: Severity;
+  quiet: boolean;
+  format: string;
+  noColor: boolean;
+  outputPath: string | undefined;
+}
+
+/**
+ * Runs the classic two-snapshot diff flow: read, diff, output, webhook, exit.
+ *
+ * @param params - The resolved command options.
+ */
+async function runFileDiff(params: FileDiffOptions): Promise<void> {
+  const before = readSnapshotFile(params.beforePath);
+  const after = await resolveAfterSnapshot(
+    params.afterPath,
+    params.live,
+    params.options,
+    params.quiet,
+  );
+
+  const report = diffSnapshots(before, after, { minSeverity: params.severity });
+
+  let output: string;
+  if (params.format === "json") {
+    output = formatJson(report);
+  } else if (params.format === "markdown") {
+    output = formatMarkdown(report);
+  } else {
+    output = formatTerminal(report);
+  }
+
+  if (params.noColor && params.format === "terminal") {
+    output = stripAnsi(output);
+  }
+
+  writeOutput(`${output}\n`, params.outputPath);
+
+  // Send webhook if configured
+  const webhookUrl = params.options["webhook"] as string | undefined;
+  if (webhookUrl) {
+    const payload = createWebhookPayload(report, {
+      trigger: "cli",
+      baselinePath: params.beforePath,
+    });
+    const result = await sendWebhook(webhookUrl, payload);
+    if (!result.success) {
+      process.stderr.write(`Warning: Webhook failed: ${result.error}\n`);
+    }
+  }
+
+  // Determine exit code using unfiltered diff
+  const fullReport = diffSnapshots(before, after);
+  const failThreshold = SEVERITY_ORDER[params.failOn];
+  const hasFailure = fullReport.changes.some((c) => SEVERITY_ORDER[c.severity] >= failThreshold);
+
+  if (hasFailure) {
+    throw new CliExitError(1);
+  }
+}
+
 /**
  * Creates the `diff` subcommand for the mcpdiff CLI.
  *
@@ -87,9 +156,13 @@ async function resolveAfterSnapshot(
 export function createDiffCommand(): Command {
   const cmd = new Command("diff")
     .description("Compare two snapshots and report changes")
-    .argument("<before>", "Path to baseline snapshot file")
+    .argument("[before]", "Path to baseline snapshot file (not needed with --baseline)")
     .argument("[after]", "Path to updated snapshot file (not needed with --live)")
     .option("--live", "Diff baseline against a live server instead of a file")
+    .option(
+      "--baseline <dir>",
+      "Diff all config servers against baselines in this directory (requires --config)",
+    )
     .option("--severity <level>", "Minimum severity to display: safe | warning | breaking", "safe")
     .option("--fail-on <level>", "Exit code 1 threshold: safe | warning | breaking", "breaking")
     .option("--webhook <url>", "POST diff results to a webhook URL");
@@ -99,7 +172,7 @@ export function createDiffCommand(): Command {
   cmd.action(
     handleErrors(
       async (
-        beforePath: string,
+        beforePath: string | undefined,
         afterPath: string | undefined,
         options: Record<string, unknown>,
       ) => {
@@ -110,54 +183,47 @@ export function createDiffCommand(): Command {
         const parentOpts = cmd.parent?.opts() ?? {};
         const quiet = parentOpts["quiet"] === true;
 
-        const before = readSnapshotFile(beforePath);
-        const after = await resolveAfterSnapshot(afterPath, live, options, quiet);
-
-        const format = resolveFormat(parentOpts["format"] as string | undefined);
-        const noColor = parentOpts["color"] === false;
-        const outputPath = parentOpts["output"] as string | undefined;
-
-        const report = diffSnapshots(before, after, { minSeverity: severity });
-
-        let output: string;
-        if (format === "json") {
-          output = formatJson(report);
-        } else if (format === "markdown") {
-          output = formatMarkdown(report);
-        } else {
-          output = formatTerminal(report);
-        }
-
-        if (noColor && format === "terminal") {
-          output = stripAnsi(output);
-        }
-
-        writeOutput(`${output}\n`, outputPath);
-
-        // Send webhook if configured
-        const webhookUrl = options["webhook"] as string | undefined;
-        if (webhookUrl) {
-          const trigger = live ? "cli" : "cli";
-          const payload = createWebhookPayload(report, {
-            trigger,
-            baselinePath: beforePath,
-          });
-          const result = await sendWebhook(webhookUrl, payload);
-          if (!result.success) {
-            process.stderr.write(`Warning: Webhook failed: ${result.error}\n`);
+        const baselineDir = options["baseline"] as string | undefined;
+        if (baselineDir) {
+          const configPath = options["config"] as string | undefined;
+          if (!configPath) {
+            throw new Error("--baseline requires --config");
           }
+          if (beforePath) {
+            throw new Error("--baseline cannot be combined with snapshot file arguments");
+          }
+
+          await executeCompositionDiff({
+            configPath,
+            baselineDir,
+            minSeverity: severity,
+            failOn,
+            quiet,
+            format: resolveFormat(parentOpts["format"] as string | undefined),
+            noColor: parentOpts["color"] === false,
+            outputPath: parentOpts["output"] as string | undefined,
+          });
+          return;
         }
 
-        // Determine exit code using unfiltered diff
-        const fullReport = diffSnapshots(before, after);
-        const failThreshold = SEVERITY_ORDER[failOn];
-        const hasFailure = fullReport.changes.some(
-          (c) => SEVERITY_ORDER[c.severity] >= failThreshold,
-        );
-
-        if (hasFailure) {
-          throw new CliExitError(1);
+        if (!beforePath) {
+          throw new Error(
+            "Two snapshot file paths are required (or use --baseline for a composition diff)",
+          );
         }
+
+        await runFileDiff({
+          beforePath,
+          afterPath,
+          live,
+          options,
+          severity,
+          failOn,
+          quiet,
+          format: resolveFormat(parentOpts["format"] as string | undefined),
+          noColor: parentOpts["color"] === false,
+          outputPath: parentOpts["output"] as string | undefined,
+        });
       },
     ),
   );
