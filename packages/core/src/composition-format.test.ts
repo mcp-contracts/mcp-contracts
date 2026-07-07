@@ -43,6 +43,18 @@ describe("formatCompositionTerminal", () => {
     expect(output).toContain("4 servers: 2 diffed, 1 missing baseline, 1 missing server");
     expect(output).toContain("1 breaking across 4 servers");
   });
+
+  it("shows hints for missing baselines and missing servers", () => {
+    const output = formatCompositionTerminal(sampleReport());
+    expect(output).toContain("Hint: Servers without a baseline: run `mcpdiff snapshot");
+    expect(output).toContain("rename its baseline file to match");
+  });
+
+  it("omits hints when every server was diffed", () => {
+    const snap = makeSnapshot("s", { ping: tool("Ping") });
+    const report = diffComposition([entry("s", snap)], [entry("s", snap)]);
+    expect(formatCompositionTerminal(report)).not.toContain("Hint:");
+  });
 });
 
 describe("formatCompositionMarkdown", () => {
@@ -58,6 +70,18 @@ describe("formatCompositionMarkdown", () => {
     const output = formatCompositionMarkdown(sampleReport());
     expect(output).toContain("**breaking**");
     expect(output).toContain("delete_repo");
+  });
+
+  it("shows hints for missing baselines and missing servers", () => {
+    const output = formatCompositionMarkdown(sampleReport());
+    expect(output).toContain("> **Hint:** Servers without a baseline");
+    expect(output).toContain("rename its baseline file to match");
+  });
+
+  it("omits hints when every server was diffed", () => {
+    const snap = makeSnapshot("s", { ping: tool("Ping") });
+    const report = diffComposition([entry("s", snap)], [entry("s", snap)]);
+    expect(formatCompositionMarkdown(report)).not.toContain("Hint:");
   });
 });
 

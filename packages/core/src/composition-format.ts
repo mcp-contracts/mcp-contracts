@@ -46,6 +46,31 @@ function serverStatusLine(entry: ServerDiffEntry): string {
 }
 
 /**
+ * Builds actionable hints for missing-baseline / missing-server entries.
+ *
+ * A missing baseline usually means a newly added server; a missing server
+ * usually means a removed — or renamed — config entry. Renaming a server key
+ * in mcp.json produces one of each, so the rename hint covers that case.
+ *
+ * @param report - The composition diff report.
+ * @returns Hint lines, empty when every server was diffed.
+ */
+function buildHints(report: CompositionDiffReport): string[] {
+  const hints: string[] = [];
+  if (report.summary.missingBaselines > 0) {
+    hints.push(
+      "Servers without a baseline: run `mcpdiff snapshot --config <config> --all` to capture one.",
+    );
+  }
+  if (report.summary.missingServers > 0) {
+    hints.push(
+      "Baselines without a server: if the server was renamed in the config, rename its baseline file to match; if it was removed intentionally, delete the baseline file.",
+    );
+  }
+  return hints;
+}
+
+/**
  * Formats a composition diff report as pretty-printed JSON.
  *
  * @param report - The composition diff report.
@@ -82,6 +107,14 @@ export function formatCompositionTerminal(report: CompositionDiffReport): string
 
     for (const change of entry.report?.changes ?? []) {
       lines.push(formatChangeTerminal(change));
+    }
+  }
+
+  const hints = buildHints(report);
+  if (hints.length > 0) {
+    lines.push("");
+    for (const hint of hints) {
+      lines.push(`${ANSI.dim}Hint: ${hint}${ANSI.reset}`);
     }
   }
 
@@ -127,6 +160,14 @@ export function formatCompositionMarkdown(report: CompositionDiffReport): string
     if ((entry.report?.changes.length ?? 0) > 0) {
       lines.push("");
     }
+  }
+
+  const hints = buildHints(report);
+  if (hints.length > 0) {
+    for (const hint of hints) {
+      lines.push(`> **Hint:** ${hint}`);
+    }
+    lines.push("");
   }
 
   return lines.join("\n").trimEnd();
