@@ -61,6 +61,9 @@ mcpdiff snapshot --url http://localhost:3000/sse --sse --header "Authorization: 
 
 # From an mcp.json config file
 mcpdiff snapshot --config ./mcp.json --server my-server -o snapshot.mcpc.json
+
+# Snapshot every server in the config at once (one file per server)
+mcpdiff snapshot --config ./mcp.json --all --out-dir contracts/
 ```
 
 ### `mcpdiff diff`
@@ -87,12 +90,41 @@ mcpdiff diff before.mcpc.json after.mcpc.json --webhook https://example.com/hook
 
 ```
 --live               Diff baseline against a live server instead of a file
+--baseline <dir>     Diff all config servers against baselines in this directory (requires --config)
 --severity <level>   Minimum severity to display: safe | warning | breaking (default: "safe")
 --fail-on <level>    Exit code 1 threshold: safe | warning | breaking (default: "breaking")
 --webhook <url>      POST diff results to a webhook URL
 ```
 
 **Exit codes:** `0` = no breaking changes, `1` = breaking changes detected, `2` = error.
+
+Composition mode diffs every server in an mcp.json config against its baseline directory:
+
+```bash
+mcpdiff diff --config ./mcp.json --baseline contracts/
+```
+
+### `mcpdiff check-conflicts`
+
+Detects duplicate tool names across the servers of an mcp.json config.
+
+```bash
+mcpdiff check-conflicts --config ./mcp.json
+
+# Only fail on schema conflicts, tolerate identical duplicates
+mcpdiff check-conflicts --config ./mcp.json --fail-on conflicting
+```
+
+**Exit codes:** `0` = no collisions, `1` = collisions found, `2` = error.
+
+### `mcpdiff graph`
+
+Renders a dependency graph of all servers in an mcp.json config.
+
+```bash
+mcpdiff graph --config ./mcp.json
+mcpdiff --format mermaid graph --config ./mcp.json   # also: dot, json
+```
 
 ### `mcpdiff baseline`
 
