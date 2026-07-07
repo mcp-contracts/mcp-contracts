@@ -7,7 +7,17 @@
  */
 
 export { detectToolCollisions } from "./collision.js";
+export {
+  formatCollisionsJson,
+  formatCollisionsMarkdown,
+  formatCollisionsTerminal,
+} from "./collision-format.js";
 export { diffComposition } from "./composition.js";
+export {
+  formatCompositionJson,
+  formatCompositionMarkdown,
+  formatCompositionTerminal,
+} from "./composition-format.js";
 export type {
   CollisionKind,
   CollisionReport,
