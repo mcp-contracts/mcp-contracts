@@ -55,10 +55,10 @@ export function formatGraphTerminal(graph: DependencyGraph): string {
     server.tools.forEach((toolName, index) => {
       const connector = index === server.tools.length - 1 ? "└──" : "├──";
       const overlap = overlapByTool.get(toolName);
-      const note =
-        overlap && overlap.servers.includes(server.name)
-          ? ` ⚠ ${overlapNote(overlap, server.name)}`
-          : "";
+      let note = "";
+      if (overlap?.servers.includes(server.name)) {
+        note = ` ⚠ ${overlapNote(overlap, server.name)}`;
+      }
       lines.push(`${connector} ${toolName}${note}`);
     });
     lines.push("");
