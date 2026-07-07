@@ -35,6 +35,14 @@ export type {
 } from "./diff-types.js";
 export { SEVERITY_ORDER } from "./diff-types.js";
 export { formatJson, formatMarkdown, formatTerminal } from "./format.js";
+export { buildDependencyGraph } from "./graph.js";
+export type { GraphFormat } from "./graph-format.js";
+export {
+  formatGraphDot,
+  formatGraphJson,
+  formatGraphMermaid,
+  formatGraphTerminal,
+} from "./graph-format.js";
 export { computeContentHash, sortKeys } from "./hash.js";
 export {
   detectKeyAlgorithm,
