@@ -6,6 +6,7 @@
  * @packageDocumentation
  */
 
+export { detectToolCollisions } from "./collision.js";
 export type {
   CollisionKind,
   CollisionReport,
