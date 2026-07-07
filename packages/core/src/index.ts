@@ -7,6 +7,7 @@
  */
 
 export { detectToolCollisions } from "./collision.js";
+export { diffComposition } from "./composition.js";
 export type {
   CollisionKind,
   CollisionReport,
