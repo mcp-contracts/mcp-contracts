@@ -6,6 +6,20 @@
  * @packageDocumentation
  */
 
+export type {
+  CollisionKind,
+  CollisionReport,
+  CollisionSummary,
+  CompositionDiffReport,
+  CompositionSummary,
+  DependencyGraph,
+  GraphOverlap,
+  GraphServer,
+  ServerDiffEntry,
+  ServerDiffStatus,
+  ServerSnapshotEntry,
+  ToolCollision,
+} from "./composition-types.js";
 export { diffSnapshots } from "./diff.js";
 export type {
   ChangeCategory,
