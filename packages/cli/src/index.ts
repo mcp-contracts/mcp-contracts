@@ -8,6 +8,7 @@
 
 import { Command } from "commander";
 import { createBaselineCommand } from "./commands/baseline.js";
+import { createCheckConflictsCommand } from "./commands/check-conflicts.js";
 import { createCiCommand } from "./commands/ci.js";
 import { createDiffCommand } from "./commands/diff.js";
 import { createInspectCommand } from "./commands/inspect.js";
@@ -30,6 +31,7 @@ program
   .option("--verbose", "Show detailed information");
 
 program.addCommand(createBaselineCommand());
+program.addCommand(createCheckConflictsCommand());
 program.addCommand(createCiCommand());
 program.addCommand(createDiffCommand());
 program.addCommand(createInspectCommand());
