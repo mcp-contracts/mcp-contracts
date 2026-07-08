@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 jobs:
   publish:
@@ -31,22 +32,39 @@ jobs:
 
       - run: pnpm -r test
 
+      # Each publish step skips versions that already exist so that a re-run
+      # after a partial failure only publishes what is still missing.
       - name: Publish @mcp-contracts/core to npm
         run: |
-          pnpm pack
-          npm publish *.tgz --access public --provenance
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "@mcp-contracts/core@$VERSION" version >/dev/null 2>&1; then
+            echo "@mcp-contracts/core@$VERSION already published — skipping"
+          else
+            pnpm pack
+            npm publish *.tgz --access public --provenance
+          fi
         working-directory: packages/core
 
       - name: Publish @mcp-contracts/cli to npm
         run: |
-          pnpm pack
-          npm publish *.tgz --access public --provenance
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "@mcp-contracts/cli@$VERSION" version >/dev/null 2>&1; then
+            echo "@mcp-contracts/cli@$VERSION already published — skipping"
+          else
+            pnpm pack
+            npm publish *.tgz --access public --provenance
+          fi
         working-directory: packages/cli
 
       - name: Publish @mcp-contracts/test to npm
         run: |
-          pnpm pack
-          npm publish *.tgz --access public --provenance
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "@mcp-contracts/test@$VERSION" version >/dev/null 2>&1; then
+            echo "@mcp-contracts/test@$VERSION already published — skipping"
+          else
+            pnpm pack
+            npm publish *.tgz --access public --provenance
+          fi
         working-directory: packages/test
 
       - uses: actions/setup-node@v6
