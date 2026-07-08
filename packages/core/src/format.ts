@@ -1,7 +1,7 @@
 import type { DiffReport, SchemaChange, Severity } from "./diff-types.js";
 
-/** ANSI color codes for terminal output. */
-const ANSI = {
+/** ANSI color codes for terminal output. Internal to core formatters. */
+export const ANSI = {
   reset: "\x1b[0m",
   bold: "\x1b[1m",
   dim: "\x1b[2m",
@@ -12,8 +12,8 @@ const ANSI = {
   white: "\x1b[37m",
 } as const;
 
-/** Severity icons for terminal and markdown output. */
-const SEVERITY_ICONS: Record<Severity, string> = {
+/** Severity icons for terminal and markdown output. Internal to core formatters. */
+export const SEVERITY_ICONS: Record<Severity, string> = {
   breaking: "\u{1F534}",
   warning: "\u{1F7E1}",
   safe: "\u{1F7E2}",
@@ -53,7 +53,7 @@ function inlineDiff(before: string, after: string): string {
  * @param change - The schema change to format.
  * @returns Formatted terminal string for this change.
  */
-function formatChangeTerminal(change: SchemaChange): string {
+export function formatChangeTerminal(change: SchemaChange): string {
   const icon = SEVERITY_ICONS[change.severity];
   const color = SEVERITY_COLORS[change.severity];
   const severity = `${color}${change.severity}${ANSI.reset}`;
@@ -133,7 +133,7 @@ export function formatTerminal(report: DiffReport): string {
  * @param change - The schema change to format.
  * @returns Markdown string for this change.
  */
-function formatChangeMarkdown(change: SchemaChange): string {
+export function formatChangeMarkdown(change: SchemaChange): string {
   const icon = SEVERITY_ICONS[change.severity];
   const lines = [`- ${icon} **${change.severity}** — ${change.message}`];
 

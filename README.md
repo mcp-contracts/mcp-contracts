@@ -59,6 +59,9 @@ mcpdiff snapshot --url http://localhost:3000/mcp -o snapshot.mcpc.json
 
 # From an mcp.json config file
 mcpdiff snapshot --config ./mcp.json --server my-server -o snapshot.mcpc.json
+
+# Snapshot every server in the config at once (one file per server)
+mcpdiff snapshot --config ./mcp.json --all --out-dir contracts/
 ```
 
 ### `mcpdiff diff`
@@ -79,9 +82,40 @@ mcpdiff diff before.mcpc.json after.mcpc.json --format json
 
 # Send results to a webhook
 mcpdiff diff before.mcpc.json after.mcpc.json --webhook https://example.com/hook
+
+# Diff every server in an mcp.json config against its baseline in one report
+mcpdiff diff --config ./mcp.json --baseline contracts/
 ```
 
 **Exit codes:** `0` = no breaking changes, `1` = breaking changes detected, `2` = error.
+
+### `mcpdiff check-conflicts`
+
+Detects duplicate tool names across the servers of an mcp.json config. Duplicates with
+identical schemas are reported as `exact`; same-named tools with different schemas are
+`conflicting` — dangerous for agents that route tool calls by bare tool name.
+
+```bash
+mcpdiff check-conflicts --config ./mcp.json
+
+# Only fail CI on schema conflicts, tolerate identical duplicates
+mcpdiff check-conflicts --config ./mcp.json --fail-on conflicting
+```
+
+**Exit codes:** `0` = no collisions, `1` = collisions found, `2` = error.
+
+### `mcpdiff graph`
+
+Renders a dependency graph of all servers in an mcp.json config: every server with its
+tools, plus overlap edges where two servers expose the same tool name.
+
+```bash
+mcpdiff graph --config ./mcp.json
+
+# Mermaid or Graphviz output for docs
+mcpdiff --format mermaid graph --config ./mcp.json
+mcpdiff --format dot graph --config ./mcp.json
+```
 
 ### `mcpdiff baseline`
 

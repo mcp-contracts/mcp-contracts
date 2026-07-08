@@ -1,8 +1,8 @@
-import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Command } from "commander";
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
-import { createSnapshotCommand } from "./snapshot.js";
+import { createSnapshotCommand, snapshotFileName } from "./snapshot.js";
 
 vi.mock("./mcp-client.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./mcp-client.js")>();
@@ -199,6 +199,53 @@ describe("snapshot command", () => {
     expect(stderrData).toContain("Failed to read config file");
   });
 
+  it("captures all config servers with --all into --out-dir", async () => {
+    const configPath = resolve(import.meta.dirname, "__tmp_mcp_config_all.json");
+    const outDir = resolve(import.meta.dirname, "__tmp_contracts_all");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        mcpServers: {
+          server_a: { command: "node", args: ["a.js"] },
+          server_b: { command: "node", args: ["b.js"] },
+        },
+      }),
+      "utf-8",
+    );
+    try {
+      const program = createProgram();
+      await program.parseAsync([
+        "node",
+        "mcpdiff",
+        "snapshot",
+        "--config",
+        configPath,
+        "--all",
+        "--out-dir",
+        outDir,
+      ]);
+      const snapshotA = JSON.parse(readFileSync(resolve(outDir, "server_a.mcpc.json"), "utf-8"));
+      const snapshotB = JSON.parse(readFileSync(resolve(outDir, "server_b.mcpc.json"), "utf-8"));
+      expect(snapshotA.snapshotVersion).toBe("1.0.0");
+      expect(snapshotB.snapshotVersion).toBe("1.0.0");
+      expect(stderrData).toContain("2/2 servers captured");
+    } finally {
+      unlinkSync(configPath);
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
+  it("errors when --all is used without --config", async () => {
+    const program = createProgram();
+    try {
+      await program.parseAsync(["node", "mcpdiff", "snapshot", "--all"]);
+    } catch {
+      // expected process.exit
+    }
+    expect(exitCode).toBe(2);
+    expect(stderrData).toContain("--all requires --config");
+  });
+
   it("parses --env KEY=VALUE pairs", async () => {
     const { connectToServer } = await import("./mcp-client.js");
     const program = createProgram();
@@ -217,5 +264,15 @@ describe("snapshot command", () => {
         env: { API_KEY: "secret", DEBUG: "true" },
       }),
     );
+  });
+});
+
+describe("snapshotFileName", () => {
+  it("appends the .mcpc.json extension", () => {
+    expect(snapshotFileName("github")).toBe("github.mcpc.json");
+  });
+
+  it("replaces unsafe path characters", () => {
+    expect(snapshotFileName("io.github/acme weather")).toBe("io.github-acme-weather.mcpc.json");
   });
 });

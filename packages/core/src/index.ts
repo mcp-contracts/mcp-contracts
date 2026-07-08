@@ -6,6 +6,32 @@
  * @packageDocumentation
  */
 
+export { detectToolCollisions } from "./collision.js";
+export {
+  formatCollisionsJson,
+  formatCollisionsMarkdown,
+  formatCollisionsTerminal,
+} from "./collision-format.js";
+export { diffComposition } from "./composition.js";
+export {
+  formatCompositionJson,
+  formatCompositionMarkdown,
+  formatCompositionTerminal,
+} from "./composition-format.js";
+export type {
+  CollisionKind,
+  CollisionReport,
+  CollisionSummary,
+  CompositionDiffReport,
+  CompositionSummary,
+  DependencyGraph,
+  GraphOverlap,
+  GraphServer,
+  ServerDiffEntry,
+  ServerDiffStatus,
+  ServerSnapshotEntry,
+  ToolCollision,
+} from "./composition-types.js";
 export { diffSnapshots } from "./diff.js";
 export type {
   ChangeCategory,
@@ -19,6 +45,14 @@ export type {
 } from "./diff-types.js";
 export { SEVERITY_ORDER } from "./diff-types.js";
 export { formatJson, formatMarkdown, formatTerminal } from "./format.js";
+export { buildDependencyGraph } from "./graph.js";
+export type { GraphFormat } from "./graph-format.js";
+export {
+  formatGraphDot,
+  formatGraphJson,
+  formatGraphMermaid,
+  formatGraphTerminal,
+} from "./graph-format.js";
 export { computeContentHash, sortKeys } from "./hash.js";
 export {
   detectKeyAlgorithm,

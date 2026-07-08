@@ -8,8 +8,10 @@
 
 import { Command } from "commander";
 import { createBaselineCommand } from "./commands/baseline.js";
+import { createCheckConflictsCommand } from "./commands/check-conflicts.js";
 import { createCiCommand } from "./commands/ci.js";
 import { createDiffCommand } from "./commands/diff.js";
+import { createGraphCommand } from "./commands/graph.js";
 import { createInspectCommand } from "./commands/inspect.js";
 import { createSignCommand } from "./commands/sign.js";
 import { createSnapshotCommand } from "./commands/snapshot.js";
@@ -22,7 +24,7 @@ const program = new Command();
 program
   .name("mcpdiff")
   .description("Capture, diff, and inspect MCP server tool schemas")
-  .version("0.4.0")
+  .version("0.6.0")
   .option("--format <format>", "Output format: terminal | json | markdown")
   .option("--no-color", "Disable colored output")
   .option("-o, --output <path>", "Output file path")
@@ -30,8 +32,10 @@ program
   .option("--verbose", "Show detailed information");
 
 program.addCommand(createBaselineCommand());
+program.addCommand(createCheckConflictsCommand());
 program.addCommand(createCiCommand());
 program.addCommand(createDiffCommand());
+program.addCommand(createGraphCommand());
 program.addCommand(createInspectCommand());
 program.addCommand(createSignCommand());
 program.addCommand(createSnapshotCommand());

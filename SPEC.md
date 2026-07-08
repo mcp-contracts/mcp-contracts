@@ -522,7 +522,65 @@ interface TestReport {
 
 ---
 
-## 7. Future Features
+## 7. Multi-Server & Composition
+
+Real-world agents run several MCP servers together. mcpdiff operates on such
+"compositions" via the standard mcp.json / claude_desktop_config.json format:
+every server entry under `mcpServers` is part of the composition, identified
+by its config key (the "composition name"), which stays stable even when a
+server renames itself.
+
+### 7.1 Multi-Server Snapshots
+
+`mcpdiff snapshot --config mcp.json --all [--out-dir contracts]`
+
+- Connects to every configured server in parallel and captures one snapshot each.
+- Writes `<out-dir>/<name>.mcpc.json` per server, where `<name>` is the config
+  key with characters outside `[a-zA-Z0-9._-]` replaced by `-`.
+- Prints a per-server success/failure summary to stderr.
+- Exit codes: `0` when all servers captured; `2` when any server failed
+  (successful snapshots are still written).
+
+### 7.2 Composition Diff
+
+`mcpdiff diff --config mcp.json --baseline contracts/ [--fail-on <level>]`
+
+- Captures all configured servers and diffs each against the baseline file
+  matching its composition name in the baseline directory.
+- Per-server statuses: `diffed`, `missing-baseline` (server has no baseline),
+  `missing-server` (baseline exists but the server left the composition).
+- The report aggregates per-server diff reports plus summary counts.
+- Exit code `1` when: any change meets `--fail-on` (default `breaking`); a
+  baseline's server is missing (always treated as breaking); or — at
+  `--fail-on warning` or lower — a server has no baseline.
+  Exit code `2` when any server cannot be captured.
+
+### 7.3 Tool Namespace Collision Detection
+
+`mcpdiff check-conflicts --config mcp.json [--fail-on any|conflicting]`
+
+- A collision is a tool name exposed by two or more servers.
+- Classification: `exact` when every definition has identical canonical
+  input/output schemas (descriptions and annotations are ignored);
+  `conflicting` when any schema differs. Canonicalization uses the same
+  sorted-key JSON serialization as the content hash (section 1.5).
+- Each collision includes a namespacing suggestion (`<server>_<tool>`).
+- Exit code `1` when collisions meet `--fail-on` (default `any`); `2` when
+  the scan is incomplete because a server could not be captured.
+
+### 7.4 Dependency Graph
+
+`mcpdiff graph --config mcp.json [--format terminal|mermaid|dot|json]`
+
+- Renders one node per server (name, version, tool list, resource/prompt
+  counts) plus overlap edges for tool names shared between servers, marked
+  identical or conflicting per the collision rules above.
+- Formats: `terminal` (ASCII tree, default), `mermaid` (graph TD), `dot`
+  (Graphviz), `json` (the raw DependencyGraph structure).
+
+---
+
+## 8. Future Features
 
 These are planned but not yet implemented. Listed here for context.
 

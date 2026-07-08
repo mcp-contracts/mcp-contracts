@@ -41,6 +41,10 @@ console.log(formatTerminal(report));
 - **`formatTerminal(report)`** / **`formatMarkdown(report)`** / **`formatJson(report)`** — Format a diff report for output
 - **`createWatchConfig(options?)`** — Create a validated watch configuration with defaults
 - **`createWebhookPayload(report, source)`** — Build a structured webhook payload from a diff report
+- **`diffComposition(baselines, current, options?)`** — Diff a multi-server composition against its baselines in one report
+- **`detectToolCollisions(entries)`** — Find tool names exposed by more than one server (exact vs. conflicting schemas)
+- **`buildDependencyGraph(entries)`** — Build a server/tool dependency graph with overlap edges
+- **`formatCompositionTerminal/Markdown/Json(report)`**, **`formatCollisionsTerminal/Markdown/Json(report)`**, **`formatGraphTerminal/Mermaid/Dot/Json(graph)`** — Formatters for the multi-server reports
 
 ### Watch Types
 
