@@ -26,10 +26,10 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@types/node": "^25.5.0",
+    "@types/node": "^26.1.1",
     "tsup": "^8.0.0",
-    "typescript": "^5.7.0",
-    "vitest": "^4.1.0"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   },
   "keywords": [
     "mcp",
