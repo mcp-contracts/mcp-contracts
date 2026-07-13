@@ -13,6 +13,7 @@ import { createCheckConflictsCommand } from "./commands/check-conflicts.js";
 import { createCiCommand } from "./commands/ci.js";
 import { createDiffCommand } from "./commands/diff.js";
 import { createGraphCommand } from "./commands/graph.js";
+import { createInitCommand } from "./commands/init.js";
 import { createInspectCommand } from "./commands/inspect.js";
 import { createSignCommand } from "./commands/sign.js";
 import { createSnapshotCommand } from "./commands/snapshot.js";
@@ -37,6 +38,7 @@ program
     "Path to mcpcontracts.json (default: discovered by walking up from the CWD)",
   );
 
+program.addCommand(createInitCommand());
 program.addCommand(createCheckCommand());
 program.addCommand(createUpdateCommand());
 program.addCommand(createBaselineCommand(), { hidden: true });

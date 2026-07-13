@@ -19,21 +19,23 @@ MCP servers expose tools, resources, and prompts to AI agents. These interfaces 
 ## Quick Start
 
 ```bash
-# Capture a baseline snapshot of your MCP server
-npx @mcp-contracts/cli update --command "node ./my-server/dist/index.js"
-# → writes contracts/baseline.mcpc.json
+# One-command setup: writes mcpcontracts.json and captures the baseline
+npx @mcp-contracts/cli init --command node --args ./my-server/dist/index.js
 
-# Later, check nothing has changed (locally, in CI, anywhere)
-npx @mcp-contracts/cli check --command "node ./my-server/dist/index.js"
+# From then on — zero flags, locally and in CI
+npx @mcp-contracts/cli check
+```
 
-# Or diff two snapshots manually
+`init` writes a [project config](#project-config-mcpcontractsjson) so every later invocation knows your server and baseline, captures `contracts/baseline.mcpc.json`, and prints the CI snippet to paste into your workflow.
+
+You can also diff two snapshots manually:
+
+```bash
 npx @mcp-contracts/cli snapshot --command "node ./my-server/dist/index.js" -o v1.mcpc.json
 # ... make changes ...
 npx @mcp-contracts/cli snapshot --command "node ./my-server/dist/index.js" -o v2.mcpc.json
 npx @mcp-contracts/cli diff v1.mcpc.json v2.mcpc.json
 ```
-
-Tired of repeating `--command`? Put it in a [project config](#project-config-mcpcontractsjson) once and run `mcpdiff check` with zero flags.
 
 Output:
 ```
@@ -117,6 +119,25 @@ mcpdiff graph --config ./mcp.json
 mcpdiff --format mermaid graph --config ./mcp.json
 mcpdiff --format dot graph --config ./mcp.json
 ```
+
+### `mcpdiff init`
+
+One-command onboarding: writes `mcpcontracts.json`, captures the initial baseline, and prints next steps including a copy-pasteable CI workflow.
+
+```bash
+# Non-interactive (also works in scripts/CI)
+mcpdiff init --command node --args dist/index.js
+mcpdiff init --url http://localhost:3000/mcp
+mcpdiff init --config ./mcp.json --server my-server
+
+# Interactive: offers servers from ./mcp.json, or asks for a command/URL
+mcpdiff init
+
+# Overwrite an existing mcpcontracts.json
+mcpdiff init --force --command node --args dist/index.js
+```
+
+Without a TTY, missing information exits with code `2` instead of prompting. Nothing is written unless the initial capture succeeds.
 
 ### `mcpdiff check`
 
