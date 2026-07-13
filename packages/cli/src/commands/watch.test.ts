@@ -41,11 +41,12 @@ describe("watch command", () => {
     expect(baselineOpt?.required).toBe(true);
   });
 
-  it("defaults --debounce to 500", () => {
+  it("has no commander default for --debounce so the project config can supply it", () => {
     const program = createProgram();
     const watchCmd = program.commands.find((c) => c.name() === "watch");
     const debounceOpt = watchCmd?.options.find((o) => o.long === "--debounce");
-    expect(debounceOpt?.defaultValue).toBe("500");
+    expect(debounceOpt?.defaultValue).toBeUndefined();
+    expect(debounceOpt?.description).toContain("500");
   });
 
   it("defaults --severity to safe", () => {
@@ -55,17 +56,19 @@ describe("watch command", () => {
     expect(severityOpt?.defaultValue).toBe("safe");
   });
 
-  it("defaults --fail-on to breaking", () => {
+  it("has no commander default for --fail-on so the project config can supply it", () => {
     const program = createProgram();
     const watchCmd = program.commands.find((c) => c.name() === "watch");
     const failOnOpt = watchCmd?.options.find((o) => o.long === "--fail-on");
-    expect(failOnOpt?.defaultValue).toBe("breaking");
+    expect(failOnOpt?.defaultValue).toBeUndefined();
+    expect(failOnOpt?.description).toContain("breaking");
   });
 
-  it("defaults --watch-paths to current directory", () => {
+  it("has no commander default for --watch-paths so the project config can supply it", () => {
     const program = createProgram();
     const watchCmd = program.commands.find((c) => c.name() === "watch");
     const watchPathsOpt = watchCmd?.options.find((o) => o.long === "--watch-paths");
-    expect(watchPathsOpt?.defaultValue).toEqual(["."]);
+    expect(watchPathsOpt?.defaultValue).toBeUndefined();
+    expect(watchPathsOpt?.description).toContain(".");
   });
 });

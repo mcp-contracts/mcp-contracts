@@ -89,6 +89,48 @@ export function resolveTransport(options: TransportOptions): ResolvedTransport {
 }
 
 /**
+ * Extracts the transport-related fields from parsed Commander options.
+ *
+ * @param options - The raw parsed options record from a command action.
+ * @returns The typed transport options.
+ */
+export function extractTransportOptions(options: Record<string, unknown>): TransportOptions {
+  return {
+    command: options["command"] as string | undefined,
+    url: options["url"] as string | undefined,
+    config: options["config"] as string | undefined,
+    server: options["server"] as string | undefined,
+    args: options["args"] as string[] | undefined,
+    env: options["env"] as string[] | undefined,
+    sse: options["sse"] === true ? true : undefined,
+    header: options["header"] as string[] | undefined,
+  };
+}
+
+/**
+ * Checks whether any transport flag was passed on the command line.
+ *
+ * Used to decide between CLI flags and the project config's server block —
+ * any transport flag means the config's server block is ignored entirely,
+ * so the two sources are never partially merged.
+ *
+ * @param options - The extracted transport options.
+ * @returns True if at least one transport flag is set.
+ */
+export function hasTransportFlags(options: TransportOptions): boolean {
+  return (
+    options.command !== undefined ||
+    options.url !== undefined ||
+    options.config !== undefined ||
+    options.server !== undefined ||
+    options.args !== undefined ||
+    options.env !== undefined ||
+    options.sse !== undefined ||
+    options.header !== undefined
+  );
+}
+
+/**
  * Adds the standard transport options to a Commander command.
  *
  * Avoids repeating the option calls across commands that need

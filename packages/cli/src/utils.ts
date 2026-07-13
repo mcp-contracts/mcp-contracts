@@ -1,5 +1,48 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import type { MCPContractSnapshot } from "@mcp-contracts/core";
+import type { MCPContractSnapshot, Severity } from "@mcp-contracts/core";
+import type { Command } from "commander";
+
+const VALID_SEVERITIES = new Set<string>(["safe", "warning", "breaking"]);
+
+/**
+ * Validates that a string is a valid Severity level.
+ *
+ * @param value - The string to validate.
+ * @param label - Label for the option (used in error messages).
+ * @returns The validated Severity value.
+ */
+export function parseSeverity(value: string, label: string): Severity {
+  if (!VALID_SEVERITIES.has(value)) {
+    throw new Error(`Invalid ${label} value "${value}". Must be one of: safe, warning, breaking`);
+  }
+  return value as Severity;
+}
+
+/**
+ * Prints a one-line deprecation notice to stderr.
+ *
+ * @param oldSpelling - The deprecated command spelling (e.g. "mcpdiff ci").
+ * @param newSpelling - The replacement to point users at (e.g. "mcpdiff check").
+ */
+export function printDeprecationNotice(oldSpelling: string, newSpelling: string): void {
+  process.stderr.write(
+    `Warning: '${oldSpelling}' is deprecated and will be removed in a future release; use '${newSpelling}' instead\n`,
+  );
+}
+
+/**
+ * Resolves the root program options from a possibly nested subcommand.
+ *
+ * @param cmd - The current Command instance.
+ * @returns The root program's parsed options.
+ */
+export function getRootOpts(cmd: Command): Record<string, unknown> {
+  let current: Command = cmd;
+  while (current.parent) {
+    current = current.parent;
+  }
+  return current.opts();
+}
 
 /** Output format for CLI commands. */
 export type OutputFormat = "terminal" | "json" | "markdown";

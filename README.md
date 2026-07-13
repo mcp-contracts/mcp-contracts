@@ -19,14 +19,18 @@ MCP servers expose tools, resources, and prompts to AI agents. These interfaces 
 ## Quick Start
 
 ```bash
-# Capture a baseline snapshot of your MCP server
-npx @mcp-contracts/cli baseline update --command "node ./my-server/dist/index.js"
-# → writes contracts/baseline.mcpc.json
+# One-command setup: writes mcpcontracts.json and captures the baseline
+npx @mcp-contracts/cli init --command node --args ./my-server/dist/index.js
 
-# Later, verify nothing has changed
-npx @mcp-contracts/cli baseline verify --command "node ./my-server/dist/index.js"
+# From then on — zero flags, locally and in CI
+npx @mcp-contracts/cli check
+```
 
-# Or diff two snapshots manually
+`init` writes a [project config](#project-config-mcpcontractsjson) so every later invocation knows your server and baseline, captures `contracts/baseline.mcpc.json`, and prints the CI snippet to paste into your workflow.
+
+You can also diff two snapshots manually:
+
+```bash
 npx @mcp-contracts/cli snapshot --command "node ./my-server/dist/index.js" -o v1.mcpc.json
 # ... make changes ...
 npx @mcp-contracts/cli snapshot --command "node ./my-server/dist/index.js" -o v2.mcpc.json
@@ -45,6 +49,28 @@ Output:
 ```
 
 ## Commands
+
+> Migrating from an older version? `ci`, `watch`, `baseline verify`, `baseline update`, `diff --live`, and `verify-hash` still work but are deprecated — they are replaced by `check` (with `--watch`), `update`, and `verify` (without `--key`), and will be removed in a future release.
+
+### `mcpdiff test`
+
+Runs the contract test suite from `@mcp-contracts/test` against a live server: schema conformance (every tool in the contract exists with a matching schema) plus boundary input tests.
+
+```bash
+# With a project config, zero arguments
+mcpdiff test
+
+# Explicit contract and transport
+mcpdiff test contract.mcpc.json --command node --args server.js
+mcpdiff test contract.mcpc.json --url http://localhost:3000/mcp --allow-extra-tools
+
+# Tune the suite
+mcpdiff test --no-boundary --skip-tools delete_contact --timeout 60000
+mcpdiff test --no-conformance                  # boundary tests only
+mcpdiff test --ignore-descriptions             # tolerate description drift
+```
+
+**Exit codes:** `0` = all pass, `1` = failures, `2` = error. The standalone `mcp-test` bin still works but points here; the `@mcp-contracts/test` package remains the library for vitest integration.
 
 ### `mcpdiff snapshot`
 
@@ -70,9 +96,6 @@ Compares two snapshots and classifies every change as breaking, warning, or safe
 
 ```bash
 mcpdiff diff before.mcpc.json after.mcpc.json
-
-# Diff a baseline against a live server
-mcpdiff diff baseline.mcpc.json --live --command "node server.js"
 
 # Fail CI on warnings too (stricter)
 mcpdiff diff before.mcpc.json after.mcpc.json --fail-on warning
@@ -113,61 +136,76 @@ tools, plus overlap edges where two servers expose the same tool name.
 mcpdiff graph --config ./mcp.json
 
 # Mermaid or Graphviz output for docs
-mcpdiff --format mermaid graph --config ./mcp.json
-mcpdiff --format dot graph --config ./mcp.json
+mcpdiff graph --config ./mcp.json --format mermaid
+mcpdiff graph --config ./mcp.json --format dot
 ```
 
-### `mcpdiff baseline`
+### `mcpdiff init`
 
-Manage contract baselines — capture and verify snapshots against a committed baseline.
+One-command onboarding: writes `mcpcontracts.json`, captures the initial baseline, and prints next steps including a copy-pasteable CI workflow.
 
 ```bash
-# Capture a baseline (default: contracts/baseline.mcpc.json)
-mcpdiff baseline update --command "node server.js"
+# Non-interactive (also works in scripts/CI)
+mcpdiff init --command node --args dist/index.js
+mcpdiff init --url http://localhost:3000/mcp
+mcpdiff init --config ./mcp.json --server my-server
 
-# Write to a custom path
-mcpdiff -o custom/path.mcpc.json baseline update --command "node server.js"
+# Interactive: offers servers from ./mcp.json, or asks for a command/URL
+mcpdiff init
 
-# Verify the server still matches the baseline
-mcpdiff baseline verify --command "node server.js"
-mcpdiff baseline verify --baseline custom/path.mcpc.json --url http://localhost:3000/mcp
+# Overwrite an existing mcpcontracts.json
+mcpdiff init --force --command node --args dist/index.js
 ```
 
-### `mcpdiff ci`
+Without a TTY, missing information exits with code `2` instead of prompting. Nothing is written unless the initial capture succeeds.
 
-All-in-one CI command: captures a snapshot, diffs against a baseline, outputs the report, and sets the exit code.
+### `mcpdiff check`
+
+The one command for "does the live server still match the baseline": captures a snapshot, diffs it against the baseline, reports, and sets the exit code. Works the same locally, in CI, and in watch mode.
 
 ```bash
-# Basic usage
-mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js"
+# Check against the default baseline (contracts/baseline.mcpc.json)
+mcpdiff check --command "node server.js"
+
+# With a project config, zero flags
+mcpdiff check
 
 # Fail on warnings too (stricter)
-mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js" --fail-on warning
+mcpdiff check --fail-on warning
 
 # Only show breaking changes
-mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js" --severity breaking
+mcpdiff check --severity breaking
+
+# Re-run on file changes during development
+mcpdiff check --watch --watch-paths src --debounce 1000 --clear
+
+# Require a valid signature on the baseline before diffing
+mcpdiff check --verify-signature --signature-key ./public.pem
 
 # Send results to a webhook
-mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js" --webhook https://example.com/hook
+mcpdiff check --webhook https://example.com/hook
 ```
 
-Auto-detects CI environments (GitHub Actions, GitLab CI, CircleCI) and selects the appropriate output format. Writes to `GITHUB_STEP_SUMMARY` when running in GitHub Actions.
+Auto-detects CI environments (GitHub Actions, GitLab CI, CircleCI) and selects the appropriate output format. Writes to `GITHUB_STEP_SUMMARY` when running in GitHub Actions. When the live contract is unchanged (matching content hashes), the diff engine is skipped entirely.
 
-### `mcpdiff watch`
+**Exit codes:** `0` = clean, `1` = changes at or above the `--fail-on` threshold, `2` = error.
 
-Watch for file changes and re-diff against a baseline on every change. Useful during development.
+### `mcpdiff update`
+
+Captures the live server and writes the baseline. The counterpart to `check`.
 
 ```bash
-mcpdiff watch --baseline contracts/baseline.mcpc.json --command "node server.js"
+# Write the default baseline (contracts/baseline.mcpc.json)
+mcpdiff update --command "node server.js"
 
-# Watch specific paths with custom debounce
-mcpdiff watch --baseline contracts/baseline.mcpc.json --command "node server.js" \
-  --watch-paths src lib --debounce 1000
+# With a project config, zero flags
+mcpdiff update
 
-# Send diffs to a webhook on each cycle
-mcpdiff watch --baseline contracts/baseline.mcpc.json --command "node server.js" \
-  --webhook https://example.com/hook
+# Write to a custom path
+mcpdiff update --baseline custom/path.mcpc.json --command "node server.js"
 ```
+
+For ad-hoc snapshots that are not baselines, use `mcpdiff snapshot -o <file>`.
 
 ### `mcpdiff sign`
 
@@ -188,28 +226,23 @@ The sign command verifies the content hash before signing — it will refuse to 
 
 ### `mcpdiff verify`
 
-Verifies a snapshot's signature using a public key.
+Verifies the integrity/authenticity of a snapshot file.
 
 ```bash
-# Verify (auto-discovers .mcpc.sig file next to the snapshot)
+# Content hash check only — no keys needed
+mcpdiff verify snapshot.mcpc.json
+
+# Full signature verification (auto-discovers the .mcpc.sig next to the snapshot)
 mcpdiff verify contracts/baseline.mcpc.json --key ./public.pem
 
 # Explicit signature path
 mcpdiff verify snapshot.mcpc.json --key ./public.pem --signature custom/path.mcpc.sig
+
+# JSON output reports which checks ran: ["hash"] or ["hash", "binding", "signature"]
+mcpdiff verify snapshot.mcpc.json --format json
 ```
 
-Performs three checks: content hash integrity, hash binding (signature matches this snapshot), and cryptographic verification. Exit code 0 on success, 1 on failure.
-
-### `mcpdiff verify-hash`
-
-Quick integrity check — recomputes the content hash and compares to the stored value. No keys needed.
-
-```bash
-mcpdiff verify-hash snapshot.mcpc.json
-
-# JSON output
-mcpdiff verify-hash snapshot.mcpc.json --format json
-```
+Without `--key`, only the content hash is recomputed and compared (the output says so, so the weaker check is never mistaken for the stronger one). With `--key`, three checks run: content hash integrity, hash binding (signature matches this snapshot), and cryptographic verification. Exit code 0 on success, 1 on failure.
 
 ### `mcpdiff inspect`
 
@@ -218,6 +251,8 @@ Summarizes a snapshot file.
 ```bash
 mcpdiff inspect snapshot.mcpc.json
 mcpdiff inspect snapshot.mcpc.json --tools
+mcpdiff inspect snapshot.mcpc.json --resources
+mcpdiff inspect snapshot.mcpc.json --prompts
 mcpdiff inspect snapshot.mcpc.json --schema create_contact
 ```
 
@@ -226,6 +261,9 @@ mcpdiff inspect snapshot.mcpc.json --schema create_contact
 All commands that connect to a live server accept these transport options:
 
 ```bash
+# Stdio: command, arguments, and environment variables
+mcpdiff snapshot --command node --args dist/index.js --env API_KEY=secret -o snapshot.mcpc.json
+
 # SSE transport (instead of default streamable-http)
 mcpdiff snapshot --url http://localhost:3000/sse --sse -o snapshot.mcpc.json
 
@@ -239,11 +277,63 @@ mcpdiff snapshot --url http://localhost:3000/mcp \
 | Flag | Description |
 |------|-------------|
 | `--command <cmd>` | Server command to run via stdio transport |
+| `--args <args...>` | Arguments for the server command |
+| `--env <pairs...>` | Environment variables for the server as `KEY=VALUE` pairs |
 | `--url <url>` | Server URL for streamable-http or SSE transport |
 | `--sse` | Use SSE transport instead of streamable-http (requires `--url`) |
 | `--header <header...>` | Custom HTTP headers as `"Key: Value"` (repeatable) |
 | `--config <path>` | Path to `mcp.json` config file |
 | `--server <name>` | Server name from config file |
+
+## Global Options
+
+Available on every command, in any position (`mcpdiff check --format json` and `mcpdiff --format json check` both work):
+
+| Flag | Description |
+|------|-------------|
+| `--format <format>` | Output format: `terminal` \| `json` \| `markdown` (default: terminal on a TTY, json otherwise) |
+| `-o, --output <path>` | Write output to a file instead of stdout |
+| `--no-color` | Disable colored output |
+| `--quiet` | Suppress non-essential output |
+| `--verbose` | Show detailed information |
+| `--project <path>` | Path to `mcpcontracts.json` (default: discovered by walking up from the CWD) |
+| `-V, --version` | Print the CLI version |
+
+## Project Config (`mcpcontracts.json`)
+
+Instead of repeating transport and baseline flags on every invocation, put them in an `mcpcontracts.json` at your project root. It is discovered by walking up from the current directory (like `tsconfig.json`), or passed explicitly with the global `--project <path>` option.
+
+```jsonc
+{
+  // How to reach your server — exactly one of the three transport shapes:
+  "server": {
+    "command": "node",
+    "args": ["dist/index.js"],
+    "env": { "API_KEY": "..." }
+    // or: "url": "http://localhost:3000/mcp", "sse": true, "headers": { "Authorization": "..." }
+    // or: "config": "./mcp.json", "name": "my-server"
+  },
+  "baseline": "contracts/baseline.mcpc.json",
+  "failOn": "breaking",
+  "watch": { "paths": ["src"], "debounce": 500 }
+}
+```
+
+With the config in place, the repeated commands need no flags at all:
+
+```bash
+mcpdiff update                 # knows the server + baseline path
+mcpdiff check                  # zero flags locally and in CI
+mcpdiff check --watch          # zero flags in dev
+```
+
+The config is read by every command that connects to a live server: `check`, `update`, and `snapshot`. Pure file commands (`diff a b`, `inspect`, `sign`, `verify`) ignore it.
+
+**Precedence:** explicit CLI flags > config file > built-in defaults. Passing any transport flag (`--command`, `--url`, `--config`, …) ignores the config's `server` block entirely — the two sources are never partially merged. `failOn` and the `watch` block apply to `check`.
+
+**Paths** in the config (`baseline`, `watch.paths`, `server.config`) are resolved relative to the config file's directory, so commands behave the same from any subdirectory.
+
+**Validation** is strict: unknown keys are an error (catching typos like `"failon"`), and an invalid config exits with code `2` and a message naming the file and the offending key — even when flags would have overridden it.
 
 ## Why Description Changes are Warnings
 
@@ -282,7 +372,7 @@ jobs:
 
 ### CLI in CI
 
-Use `mcpdiff ci` directly in any CI system:
+Use `mcpdiff check` directly in any CI system:
 
 ```yaml
 # .github/workflows/mcp-contract.yml
@@ -294,18 +384,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm install -g @mcp-contracts/cli
-      - run: mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node dist/index.js"
+      - run: mcpdiff check --baseline contracts/baseline.mcpc.json --command "node dist/index.js"
+
+      # Or with a committed mcpcontracts.json, zero flags
+      - run: mcpdiff check
 
       # Or with signature verification
       - run: >
-          mcpdiff ci
+          mcpdiff check
           --baseline contracts/baseline.mcpc.json
           --command "node dist/index.js"
           --verify-signature
           --signature-key ./public.pem
 ```
 
-The `ci` command auto-detects the CI environment and selects the right output format (markdown for GitHub Actions, JSON otherwise). It also writes to `GITHUB_STEP_SUMMARY` automatically.
+The `check` command auto-detects the CI environment and selects the right output format (markdown for GitHub Actions, JSON otherwise). It also writes to `GITHUB_STEP_SUMMARY` automatically.
 
 ## Packages
 
@@ -313,6 +406,7 @@ The `ci` command auto-detects the CI environment and selects the right output fo
 |---------|-------------|
 | [`@mcp-contracts/core`](./packages/core) | Snapshot types, diff engine, classification logic |
 | [`@mcp-contracts/cli`](./packages/cli) | The `mcpdiff` CLI tool |
+| [`@mcp-contracts/test`](./packages/test) | Contract testing library: conformance + boundary runner, vitest matchers |
 
 ---
 

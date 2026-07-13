@@ -2,7 +2,9 @@ import { verifyContentHash } from "@mcp-contracts/core";
 import { Command } from "commander";
 import {
   CliExitError,
+  getRootOpts,
   handleErrors,
+  printDeprecationNotice,
   readSnapshotFile,
   resolveFormat,
   writeOutput,
@@ -23,6 +25,9 @@ export function createVerifyHashCommand(): Command {
     .action(
       handleErrors(async (snapshotPath: string) => {
         const rootOpts = getRootOpts(cmd);
+        if (rootOpts["quiet"] !== true) {
+          printDeprecationNotice("mcpdiff verify-hash", "mcpdiff verify");
+        }
         const format = resolveFormat(rootOpts["format"] as string | undefined);
         const outputPath = rootOpts["output"] as string | undefined;
 
@@ -46,18 +51,4 @@ export function createVerifyHashCommand(): Command {
     );
 
   return cmd;
-}
-
-/**
- * Resolves the root program options from a deeply nested subcommand.
- *
- * @param cmd - The current Command instance.
- * @returns The root program's parsed options.
- */
-function getRootOpts(cmd: Command): Record<string, unknown> {
-  let current: Command | null = cmd;
-  while (current.parent) {
-    current = current.parent;
-  }
-  return current.opts();
 }
