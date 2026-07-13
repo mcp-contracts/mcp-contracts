@@ -66,6 +66,8 @@ mcpdiff test contract.mcpc.json --url http://localhost:3000/mcp --allow-extra-to
 
 # Tune the suite
 mcpdiff test --no-boundary --skip-tools delete_contact --timeout 60000
+mcpdiff test --no-conformance                  # boundary tests only
+mcpdiff test --ignore-descriptions             # tolerate description drift
 ```
 
 **Exit codes:** `0` = all pass, `1` = failures, `2` = error. The standalone `mcp-test` bin still works but points here; the `@mcp-contracts/test` package remains the library for vitest integration.
@@ -134,8 +136,8 @@ tools, plus overlap edges where two servers expose the same tool name.
 mcpdiff graph --config ./mcp.json
 
 # Mermaid or Graphviz output for docs
-mcpdiff --format mermaid graph --config ./mcp.json
-mcpdiff --format dot graph --config ./mcp.json
+mcpdiff graph --config ./mcp.json --format mermaid
+mcpdiff graph --config ./mcp.json --format dot
 ```
 
 ### `mcpdiff init`
@@ -175,7 +177,7 @@ mcpdiff check --fail-on warning
 mcpdiff check --severity breaking
 
 # Re-run on file changes during development
-mcpdiff check --watch --watch-paths src --debounce 1000
+mcpdiff check --watch --watch-paths src --debounce 1000 --clear
 
 # Require a valid signature on the baseline before diffing
 mcpdiff check --verify-signature --signature-key ./public.pem
@@ -249,6 +251,8 @@ Summarizes a snapshot file.
 ```bash
 mcpdiff inspect snapshot.mcpc.json
 mcpdiff inspect snapshot.mcpc.json --tools
+mcpdiff inspect snapshot.mcpc.json --resources
+mcpdiff inspect snapshot.mcpc.json --prompts
 mcpdiff inspect snapshot.mcpc.json --schema create_contact
 ```
 
@@ -257,6 +261,9 @@ mcpdiff inspect snapshot.mcpc.json --schema create_contact
 All commands that connect to a live server accept these transport options:
 
 ```bash
+# Stdio: command, arguments, and environment variables
+mcpdiff snapshot --command node --args dist/index.js --env API_KEY=secret -o snapshot.mcpc.json
+
 # SSE transport (instead of default streamable-http)
 mcpdiff snapshot --url http://localhost:3000/sse --sse -o snapshot.mcpc.json
 
@@ -270,11 +277,27 @@ mcpdiff snapshot --url http://localhost:3000/mcp \
 | Flag | Description |
 |------|-------------|
 | `--command <cmd>` | Server command to run via stdio transport |
+| `--args <args...>` | Arguments for the server command |
+| `--env <pairs...>` | Environment variables for the server as `KEY=VALUE` pairs |
 | `--url <url>` | Server URL for streamable-http or SSE transport |
 | `--sse` | Use SSE transport instead of streamable-http (requires `--url`) |
 | `--header <header...>` | Custom HTTP headers as `"Key: Value"` (repeatable) |
 | `--config <path>` | Path to `mcp.json` config file |
 | `--server <name>` | Server name from config file |
+
+## Global Options
+
+Available on every command, in any position (`mcpdiff check --format json` and `mcpdiff --format json check` both work):
+
+| Flag | Description |
+|------|-------------|
+| `--format <format>` | Output format: `terminal` \| `json` \| `markdown` (default: terminal on a TTY, json otherwise) |
+| `-o, --output <path>` | Write output to a file instead of stdout |
+| `--no-color` | Disable colored output |
+| `--quiet` | Suppress non-essential output |
+| `--verbose` | Show detailed information |
+| `--project <path>` | Path to `mcpcontracts.json` (default: discovered by walking up from the CWD) |
+| `-V, --version` | Print the CLI version |
 
 ## Project Config (`mcpcontracts.json`)
 
