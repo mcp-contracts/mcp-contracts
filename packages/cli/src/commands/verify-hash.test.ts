@@ -70,6 +70,13 @@ describe("verify-hash command", () => {
     vi.restoreAllMocks();
   });
 
+  it("prints a deprecation notice pointing at verify", async () => {
+    const program = createProgram();
+    await program.parseAsync(["node", "mcpdiff", "verify-hash", validPath, "--format", "terminal"]);
+    expect(stderrData).toContain("deprecated");
+    expect(stderrData).toContain("mcpdiff verify");
+  });
+
   it("passes for a valid snapshot (terminal)", async () => {
     const program = createProgram();
     await program.parseAsync(["node", "mcpdiff", "verify-hash", validPath, "--format", "terminal"]);

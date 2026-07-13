@@ -48,7 +48,7 @@ Output:
 
 ## Commands
 
-> Migrating from an older version? `ci`, `watch`, `baseline verify`, `baseline update`, and `diff --live` still work but are deprecated — they are replaced by `check` (with `--watch`) and `update`, and will be removed in a future release.
+> Migrating from an older version? `ci`, `watch`, `baseline verify`, `baseline update`, `diff --live`, and `verify-hash` still work but are deprecated — they are replaced by `check` (with `--watch`), `update`, and `verify` (without `--key`), and will be removed in a future release.
 
 ### `mcpdiff snapshot`
 
@@ -185,28 +185,23 @@ The sign command verifies the content hash before signing — it will refuse to 
 
 ### `mcpdiff verify`
 
-Verifies a snapshot's signature using a public key.
+Verifies the integrity/authenticity of a snapshot file.
 
 ```bash
-# Verify (auto-discovers .mcpc.sig file next to the snapshot)
+# Content hash check only — no keys needed
+mcpdiff verify snapshot.mcpc.json
+
+# Full signature verification (auto-discovers the .mcpc.sig next to the snapshot)
 mcpdiff verify contracts/baseline.mcpc.json --key ./public.pem
 
 # Explicit signature path
 mcpdiff verify snapshot.mcpc.json --key ./public.pem --signature custom/path.mcpc.sig
+
+# JSON output reports which checks ran: ["hash"] or ["hash", "binding", "signature"]
+mcpdiff verify snapshot.mcpc.json --format json
 ```
 
-Performs three checks: content hash integrity, hash binding (signature matches this snapshot), and cryptographic verification. Exit code 0 on success, 1 on failure.
-
-### `mcpdiff verify-hash`
-
-Quick integrity check — recomputes the content hash and compares to the stored value. No keys needed.
-
-```bash
-mcpdiff verify-hash snapshot.mcpc.json
-
-# JSON output
-mcpdiff verify-hash snapshot.mcpc.json --format json
-```
+Without `--key`, only the content hash is recomputed and compared (the output says so, so the weaker check is never mistaken for the stronger one). With `--key`, three checks run: content hash integrity, hash binding (signature matches this snapshot), and cryptographic verification. Exit code 0 on success, 1 on failure.
 
 ### `mcpdiff inspect`
 
@@ -270,7 +265,7 @@ mcpdiff check                  # zero flags locally and in CI
 mcpdiff check --watch          # zero flags in dev
 ```
 
-The config is read by every command that connects to a live server: `check`, `update`, and `snapshot`. Pure file commands (`diff a b`, `inspect`, `sign`, `verify`, `verify-hash`) ignore it.
+The config is read by every command that connects to a live server: `check`, `update`, and `snapshot`. Pure file commands (`diff a b`, `inspect`, `sign`, `verify`) ignore it.
 
 **Precedence:** explicit CLI flags > config file > built-in defaults. Passing any transport flag (`--command`, `--url`, `--config`, …) ignores the config's `server` block entirely — the two sources are never partially merged. `failOn` and the `watch` block apply to `check`.
 

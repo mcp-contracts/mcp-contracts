@@ -75,6 +75,8 @@ describe("verify command", () => {
     await program.parseAsync([
       "node",
       "mcpdiff",
+      "--format",
+      "terminal",
       "verify",
       validSnapshotPath,
       "--key",
@@ -99,6 +101,8 @@ describe("verify command", () => {
       await program.parseAsync([
         "node",
         "mcpdiff",
+        "--format",
+        "terminal",
         "verify",
         validSnapshotPath,
         "--key",
@@ -151,5 +155,93 @@ describe("verify command", () => {
     }
     expect(exitCode).toBe(2);
     expect(stderrData).toContain("Failed to read key file");
+  });
+});
+
+describe("verify command — hash-only mode (no --key)", () => {
+  let stdoutData: string;
+  let stderrData: string;
+  let exitCode: number | undefined;
+
+  beforeEach(() => {
+    stdoutData = "";
+    stderrData = "";
+    exitCode = undefined;
+    vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+      stdoutData += String(chunk);
+      return true;
+    });
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      stderrData += String(chunk);
+      return true;
+    });
+    vi.spyOn(process, "exit").mockImplementation((code) => {
+      exitCode = code as number;
+      throw new Error(`process.exit(${code})`);
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("verifies the content hash and notes the signature was not checked", async () => {
+    const program = createProgram();
+    await program.parseAsync([
+      "node",
+      "mcpdiff",
+      "--format",
+      "terminal",
+      "verify",
+      validSnapshotPath,
+    ]);
+    expect(stdoutData).toContain("Content hash verified");
+    expect(stderrData).toContain("only the content hash was checked");
+    expect(stderrData).toContain("--key");
+    expect(exitCode).toBeUndefined();
+  });
+
+  it("exits 1 on a tampered snapshot", async () => {
+    const snapshot = JSON.parse(readFileSync(validSnapshotPath, "utf-8"));
+    snapshot.contentHash =
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+    const tamperedPath = join(tmpDir, "tampered.mcpc.json");
+    writeFileSync(tamperedPath, JSON.stringify(snapshot, null, 2));
+
+    const program = createProgram();
+    try {
+      await program.parseAsync(["node", "mcpdiff", "--format", "terminal", "verify", tamperedPath]);
+    } catch {
+      // expected process.exit
+    }
+    expect(exitCode).toBe(1);
+    expect(stderrData).toContain("Content hash mismatch");
+  });
+
+  it("reports checks: [hash] in JSON output", async () => {
+    const program = createProgram();
+    await program.parseAsync(["node", "mcpdiff", "--format", "json", "verify", validSnapshotPath]);
+    const result = JSON.parse(stdoutData);
+    expect(result.valid).toBe(true);
+    expect(result.checks).toEqual(["hash"]);
+  });
+
+  it("reports checks: [hash, binding, signature] in JSON output with --key", async () => {
+    const program = createProgram();
+    await program.parseAsync([
+      "node",
+      "mcpdiff",
+      "--format",
+      "json",
+      "verify",
+      validSnapshotPath,
+      "--key",
+      ed25519PublicPath,
+      "--signature",
+      sigPath,
+    ]);
+    const result = JSON.parse(stdoutData);
+    expect(result.valid).toBe(true);
+    expect(result.checks).toEqual(["hash", "binding", "signature"]);
   });
 });

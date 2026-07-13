@@ -69,6 +69,7 @@ describe("integration: CLI", () => {
       expect(stdout).not.toMatch(/^ {2}ci\b/m);
       expect(stdout).not.toMatch(/^ {2}watch\b/m);
       expect(stdout).not.toMatch(/^ {2}baseline\b/m);
+      expect(stdout).not.toMatch(/^ {2}verify-hash\b/m);
     });
   });
 
@@ -493,5 +494,57 @@ describe("integration: check and update", () => {
     const diffLive = await runCliIn(projectDir, "diff", "--live", "--format", "json");
     expect(diffLive.exitCode).toBe(0);
     expect(diffLive.stderr).toContain("mcpdiff check");
+  });
+});
+
+describe("integration: verify", () => {
+  const FIXTURE_SERVER = resolve(import.meta.dirname, "fixtures/fixture-server.mjs");
+  let workDir: string;
+  let snapshotPath: string;
+
+  beforeEach(async () => {
+    workDir = mkdtempSync(join(tmpdir(), "mcpc-verify-"));
+    snapshotPath = join(workDir, "snapshot.mcpc.json");
+    const { exitCode } = await runCliIn(
+      workDir,
+      "snapshot",
+      "--command",
+      "node",
+      "--args",
+      FIXTURE_SERVER,
+      "-o",
+      snapshotPath,
+    );
+    expect(exitCode).toBe(0);
+  });
+
+  afterEach(() => {
+    rmSync(workDir, { recursive: true, force: true });
+  });
+
+  it("checks only the content hash without --key and says so", async () => {
+    const json = await runCli("verify", snapshotPath, "--format", "json");
+    expect(json.exitCode).toBe(0);
+    const result = JSON.parse(json.stdout);
+    expect(result.valid).toBe(true);
+    expect(result.checks).toEqual(["hash"]);
+
+    const terminal = await runCli("verify", snapshotPath, "--format", "terminal");
+    expect(terminal.exitCode).toBe(0);
+    expect(terminal.stdout).toContain("Content hash verified");
+    expect(terminal.stderr).toContain("only the content hash was checked");
+  });
+
+  it("verify-hash still works as a deprecated alias", async () => {
+    const { stdout, stderr, exitCode } = await runCli(
+      "verify-hash",
+      snapshotPath,
+      "--format",
+      "json",
+    );
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout).valid).toBe(true);
+    expect(stderr).toContain("deprecated");
+    expect(stderr).toContain("mcpdiff verify");
   });
 });

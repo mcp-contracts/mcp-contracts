@@ -48,7 +48,7 @@ program.addCommand(createInspectCommand());
 program.addCommand(createSignCommand());
 program.addCommand(createSnapshotCommand());
 program.addCommand(createVerifyCommand());
-program.addCommand(createVerifyHashCommand());
+program.addCommand(createVerifyHashCommand(), { hidden: true });
 program.addCommand(createWatchCommand(), { hidden: true });
 
 program.parse();
