@@ -121,6 +121,10 @@ export function resolveProjectPath(project: LoadedProjectConfig, path: string): 
 /**
  * Resolves the project config's server block into a transport.
  *
+ * Stdio servers spawn with the config file's directory as their working
+ * directory, so relative command args (e.g. "node server.js") work no matter
+ * which subdirectory the CLI runs from.
+ *
  * @param project - The loaded project config.
  * @returns The resolved transport configuration.
  */
@@ -135,6 +139,7 @@ export function resolveProjectTransport(project: LoadedProjectConfig): ResolvedT
       command: server.command,
       args: server.args,
       env: server.env,
+      cwd: project.dir,
     };
   }
   if (isProjectServerUrl(server)) {
@@ -144,7 +149,12 @@ export function resolveProjectTransport(project: LoadedProjectConfig): ResolvedT
       headers: server.headers,
     };
   }
-  return readMcpConfig(resolveProjectPath(project, server.config), server.name);
+  const mcpConfigPath = resolveProjectPath(project, server.config);
+  const resolved = readMcpConfig(mcpConfigPath, server.name);
+  if (resolved.transport === "stdio") {
+    resolved.cwd = dirname(mcpConfigPath);
+  }
+  return resolved;
 }
 
 /**

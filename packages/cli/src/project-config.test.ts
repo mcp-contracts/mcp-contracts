@@ -110,6 +110,7 @@ describe("resolveProjectTransport", () => {
       command: "node",
       args: ["server.js"],
       env: { A: "b" },
+      cwd: project.dir,
     });
   });
 
@@ -143,6 +144,7 @@ describe("resolveProjectTransport", () => {
       command: "node",
       args: ["a.js"],
       env: undefined,
+      cwd: project.dir,
     });
   });
 
@@ -161,6 +163,7 @@ describe("resolveTransportOrProject", () => {
       command: "node",
       args: ["server.js"],
       env: undefined,
+      cwd: project.dir,
     });
   });
 

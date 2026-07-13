@@ -309,6 +309,30 @@ describe("integration: project config (mcpcontracts.json)", () => {
     expect(verify.exitCode).toBe(0);
   });
 
+  it("spawns relative stdio commands from the config directory", async () => {
+    // A launcher that only resolves if the server spawns with the config
+    // file's directory as its cwd, not the invoking subdirectory.
+    const launcher = join(projectDir, "srv.mjs");
+    writeFileSync(
+      launcher,
+      `await import(${JSON.stringify(`file://${FIXTURE_SERVER}`)});\n`,
+      "utf-8",
+    );
+    writeProjectConfig({
+      server: { command: "node", args: ["srv.mjs"] },
+      baseline: "contracts/baseline.mcpc.json",
+    });
+    const sub = join(projectDir, "deeply", "nested");
+    mkdirSync(sub, { recursive: true });
+
+    const update = await runCliIn(sub, "baseline", "update");
+    expect(update.exitCode).toBe(0);
+
+    const verify = await runCliIn(sub, "baseline", "verify");
+    expect(verify.exitCode).toBe(0);
+    expect(verify.stderr).toContain("Baseline verified");
+  });
+
   it("uses --project to load a config outside the cwd", async () => {
     writeProjectConfig({
       server: { command: "node", args: [FIXTURE_SERVER] },

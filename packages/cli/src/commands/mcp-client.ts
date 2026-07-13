@@ -15,6 +15,8 @@ export interface ResolvedTransport {
   command?: string;
   args?: string[];
   env?: Record<string, string>;
+  /** Working directory for the spawned stdio server (defaults to the CWD). */
+  cwd?: string;
   url?: string;
   headers?: Record<string, string>;
 }
@@ -52,6 +54,7 @@ export async function connectToServer(config: ResolvedTransport): Promise<Connec
       command: config.command,
       args: config.args,
       env: { ...getDefaultEnvironment(), ...config.env },
+      cwd: config.cwd,
     });
   } else if (config.transport === "sse") {
     if (!config.url) {
