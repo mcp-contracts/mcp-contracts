@@ -33,6 +33,8 @@ npx @mcp-contracts/cli snapshot --command "node ./my-server/dist/index.js" -o v2
 npx @mcp-contracts/cli diff v1.mcpc.json v2.mcpc.json
 ```
 
+Tired of repeating `--command`? Put it in a [project config](#project-config-mcpcontractsjson) once and run `mcpdiff baseline verify` with zero flags.
+
 Output:
 ```
   mcp-contracts diff — acme-server v1.0.0 → v1.1.0
@@ -244,6 +246,43 @@ mcpdiff snapshot --url http://localhost:3000/mcp \
 | `--header <header...>` | Custom HTTP headers as `"Key: Value"` (repeatable) |
 | `--config <path>` | Path to `mcp.json` config file |
 | `--server <name>` | Server name from config file |
+
+## Project Config (`mcpcontracts.json`)
+
+Instead of repeating transport and baseline flags on every invocation, put them in an `mcpcontracts.json` at your project root. It is discovered by walking up from the current directory (like `tsconfig.json`), or passed explicitly with the global `--project <path>` option.
+
+```jsonc
+{
+  // How to reach your server — exactly one of the three transport shapes:
+  "server": {
+    "command": "node",
+    "args": ["dist/index.js"],
+    "env": { "API_KEY": "..." }
+    // or: "url": "http://localhost:3000/mcp", "sse": true, "headers": { "Authorization": "..." }
+    // or: "config": "./mcp.json", "name": "my-server"
+  },
+  "baseline": "contracts/baseline.mcpc.json",
+  "failOn": "breaking",
+  "watch": { "paths": ["src"], "debounce": 500 }
+}
+```
+
+With the config in place, the repeated commands need no flags at all:
+
+```bash
+mcpdiff baseline update        # knows the server + baseline path
+mcpdiff baseline verify        # zero flags locally
+mcpdiff ci                     # zero flags in CI
+mcpdiff watch                  # zero flags in dev
+```
+
+The config is read by every command that connects to a live server: `snapshot`, `diff --live`, `baseline update`, `baseline verify`, `ci`, and `watch`. Pure file commands (`diff a b`, `inspect`, `sign`, `verify`, `verify-hash`) ignore it.
+
+**Precedence:** explicit CLI flags > config file > built-in defaults. Passing any transport flag (`--command`, `--url`, `--config`, …) ignores the config's `server` block entirely — the two sources are never partially merged. `failOn` applies to `ci` and `watch`; the `watch` block applies to `watch` only.
+
+**Paths** in the config (`baseline`, `watch.paths`, `server.config`) are resolved relative to the config file's directory, so commands behave the same from any subdirectory.
+
+**Validation** is strict: unknown keys are an error (catching typos like `"failon"`), and an invalid config exits with code `2` and a message naming the file and the offending key — even when flags would have overridden it.
 
 ## Why Description Changes are Warnings
 
