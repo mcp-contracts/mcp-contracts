@@ -2,6 +2,7 @@ import type { Severity } from "@mcp-contracts/core";
 import { Command } from "commander";
 import type { LoadedProjectConfig } from "../project-config.js";
 import {
+  DEFAULT_BASELINE_PATH,
   loadProjectConfig,
   resolveBaselinePath,
   resolveProjectPath,
@@ -47,10 +48,9 @@ export function resolveWatchOptions(
     resolveProjectPath(project, p),
   );
   const watchPaths = (options["watchPaths"] as string[] | undefined) ?? projectWatchPaths ?? ["."];
-  const baselinePath = resolveBaselinePath(options["baseline"] as string | undefined, project);
-  if (!baselinePath) {
-    throw new Error('--baseline is required (or set "baseline" in mcpcontracts.json)');
-  }
+  const baselinePath =
+    resolveBaselinePath(options["baseline"] as string | undefined, project) ??
+    DEFAULT_BASELINE_PATH;
   const webhookUrl = options["webhook"] as string | undefined;
   const shouldClear =
     options["clear"] === true || (options["clear"] === undefined && process.stdout.isTTY);
@@ -74,7 +74,7 @@ export function createWatchCommand(): Command {
   addTransportOptions(cmd);
 
   cmd
-    .option("--baseline <path>", "Path to baseline snapshot")
+    .option("--baseline <path>", `Path to baseline snapshot (default: "${DEFAULT_BASELINE_PATH}")`)
     .option("--watch-paths <paths...>", 'Paths to watch for changes (default: ".")')
     .option("--debounce <ms>", "Debounce interval in milliseconds (default: 500)")
     .option("--severity <level>", "Minimum severity to display", "safe")

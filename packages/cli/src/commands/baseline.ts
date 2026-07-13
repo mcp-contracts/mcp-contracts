@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import { diffSnapshots } from "@mcp-contracts/core";
 import { Command } from "commander";
 import {
+  DEFAULT_BASELINE_PATH,
   loadProjectConfig,
   resolveBaselinePath,
   resolveTransportOrProject,
@@ -16,8 +17,6 @@ import {
   writeOutput,
 } from "../utils.js";
 import { captureSnapshot } from "./capture.js";
-
-const DEFAULT_BASELINE_PATH = "contracts/baseline.mcpc.json";
 
 /**
  * Creates the `baseline update` subcommand.
