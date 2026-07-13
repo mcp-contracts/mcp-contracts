@@ -29,7 +29,11 @@ program
   .option("--no-color", "Disable colored output")
   .option("-o, --output <path>", "Output file path")
   .option("--quiet", "Suppress non-essential output")
-  .option("--verbose", "Show detailed information");
+  .option("--verbose", "Show detailed information")
+  .option(
+    "--project <path>",
+    "Path to mcpcontracts.json (default: discovered by walking up from the CWD)",
+  );
 
 program.addCommand(createBaselineCommand());
 program.addCommand(createCheckConflictsCommand());

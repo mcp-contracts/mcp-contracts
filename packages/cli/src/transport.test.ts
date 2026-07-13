@@ -2,7 +2,13 @@ import { unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Command } from "commander";
 import { describe, expect, it } from "vitest";
-import { addTransportOptions, parseHeaders, resolveTransport } from "./transport.js";
+import {
+  addTransportOptions,
+  extractTransportOptions,
+  hasTransportFlags,
+  parseHeaders,
+  resolveTransport,
+} from "./transport.js";
 
 describe("resolveTransport", () => {
   it("resolves --command to stdio transport", () => {
@@ -174,5 +180,55 @@ describe("addTransportOptions", () => {
     const cmd = new Command("test");
     const result = addTransportOptions(cmd);
     expect(result).toBe(cmd);
+  });
+});
+
+describe("extractTransportOptions", () => {
+  it("extracts all transport fields from a parsed options record", () => {
+    const options = {
+      command: "node",
+      args: ["server.js"],
+      env: ["A=b"],
+      url: "http://localhost:3000",
+      sse: true,
+      header: ["X: y"],
+      config: "./mcp.json",
+      server: "alpha",
+      baseline: "ignored.mcpc.json",
+    };
+    expect(extractTransportOptions(options)).toEqual({
+      command: "node",
+      args: ["server.js"],
+      env: ["A=b"],
+      url: "http://localhost:3000",
+      sse: true,
+      header: ["X: y"],
+      config: "./mcp.json",
+      server: "alpha",
+    });
+  });
+
+  it("leaves absent fields undefined", () => {
+    const extracted = extractTransportOptions({ severity: "safe" });
+    expect(extracted.command).toBeUndefined();
+    expect(extracted.sse).toBeUndefined();
+  });
+});
+
+describe("hasTransportFlags", () => {
+  it("returns false for empty options", () => {
+    expect(hasTransportFlags(extractTransportOptions({}))).toBe(false);
+    expect(hasTransportFlags(extractTransportOptions({ baseline: "b.mcpc.json" }))).toBe(false);
+  });
+
+  it("returns true when any transport flag is set", () => {
+    expect(hasTransportFlags(extractTransportOptions({ command: "node" }))).toBe(true);
+    expect(hasTransportFlags(extractTransportOptions({ url: "http://x" }))).toBe(true);
+    expect(hasTransportFlags(extractTransportOptions({ config: "./mcp.json" }))).toBe(true);
+    expect(hasTransportFlags(extractTransportOptions({ args: ["a"] }))).toBe(true);
+    expect(hasTransportFlags(extractTransportOptions({ env: ["A=b"] }))).toBe(true);
+    expect(hasTransportFlags(extractTransportOptions({ sse: true }))).toBe(true);
+    expect(hasTransportFlags(extractTransportOptions({ header: ["X: y"] }))).toBe(true);
+    expect(hasTransportFlags(extractTransportOptions({ server: "alpha" }))).toBe(true);
   });
 });

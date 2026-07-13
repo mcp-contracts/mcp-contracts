@@ -8,8 +8,13 @@ import {
   SEVERITY_ORDER,
 } from "@mcp-contracts/core";
 import { Command } from "commander";
-import type { TransportOptions } from "../transport.js";
-import { addTransportOptions, resolveTransport } from "../transport.js";
+import type { LoadedProjectConfig } from "../project-config.js";
+import {
+  loadProjectConfig,
+  resolveBaselinePath,
+  resolveTransportOrProject,
+} from "../project-config.js";
+import { addTransportOptions } from "../transport.js";
 import {
   CliExitError,
   handleErrors,
@@ -44,6 +49,7 @@ function parseSeverity(value: string, label: string): Severity {
  * @param afterPath - Path to snapshot file (may be undefined in live mode).
  * @param live - Whether live mode is enabled.
  * @param options - CLI options containing transport settings.
+ * @param project - The loaded project config, if any (live mode only).
  * @param quiet - Suppress non-essential output.
  * @returns The "after" snapshot.
  */
@@ -51,6 +57,7 @@ async function resolveAfterSnapshot(
   afterPath: string | undefined,
   live: boolean,
   options: Record<string, unknown>,
+  project: LoadedProjectConfig | null,
   quiet: boolean,
 ): Promise<MCPContractSnapshot> {
   if (!live) {
@@ -60,18 +67,7 @@ async function resolveAfterSnapshot(
     return readSnapshotFile(afterPath);
   }
 
-  const transportOpts: TransportOptions = {
-    command: options["command"] as string | undefined,
-    url: options["url"] as string | undefined,
-    config: options["config"] as string | undefined,
-    server: options["server"] as string | undefined,
-    args: options["args"] as string[] | undefined,
-    env: options["env"] as string[] | undefined,
-    sse: options["sse"] === true ? true : undefined,
-    header: options["header"] as string[] | undefined,
-  };
-
-  const config = resolveTransport(transportOpts);
+  const config = resolveTransportOrProject(options, project);
   const { snapshot } = await captureSnapshot({ transport: config, quiet });
   return snapshot;
 }
@@ -81,6 +77,7 @@ interface FileDiffOptions {
   beforePath: string;
   afterPath: string | undefined;
   live: boolean;
+  project: LoadedProjectConfig | null;
   options: Record<string, unknown>;
   severity: Severity;
   failOn: Severity;
@@ -101,6 +98,7 @@ async function runFileDiff(params: FileDiffOptions): Promise<void> {
     params.afterPath,
     params.live,
     params.options,
+    params.project,
     params.quiet,
   );
 
@@ -206,16 +204,27 @@ export function createDiffCommand(): Command {
           return;
         }
 
-        if (!beforePath) {
+        // In live mode the project config can supply both the baseline
+        // ("before") and the server transport; file-to-file diffs ignore it.
+        const project = live
+          ? loadProjectConfig(parentOpts["project"] as string | undefined)
+          : null;
+        const resolvedBefore =
+          beforePath ?? (live ? resolveBaselinePath(undefined, project) : undefined);
+
+        if (!resolvedBefore) {
           throw new Error(
-            "Two snapshot file paths are required (or use --baseline for a composition diff)",
+            live
+              ? 'A baseline snapshot path is required (or set "baseline" in mcpcontracts.json)'
+              : "Two snapshot file paths are required (or use --baseline for a composition diff)",
           );
         }
 
         await runFileDiff({
-          beforePath,
+          beforePath: resolvedBefore,
           afterPath,
           live,
+          project,
           options,
           severity,
           failOn,

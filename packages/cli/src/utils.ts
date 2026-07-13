@@ -1,5 +1,20 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import type { MCPContractSnapshot } from "@mcp-contracts/core";
+import type { Command } from "commander";
+
+/**
+ * Resolves the root program options from a possibly nested subcommand.
+ *
+ * @param cmd - The current Command instance.
+ * @returns The root program's parsed options.
+ */
+export function getRootOpts(cmd: Command): Record<string, unknown> {
+  let current: Command = cmd;
+  while (current.parent) {
+    current = current.parent;
+  }
+  return current.opts();
+}
 
 /** Output format for CLI commands. */
 export type OutputFormat = "terminal" | "json" | "markdown";

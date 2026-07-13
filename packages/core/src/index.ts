@@ -54,6 +54,22 @@ export {
   formatGraphTerminal,
 } from "./graph-format.js";
 export { computeContentHash, sortKeys } from "./hash.js";
+export type {
+  ProjectConfig,
+  ProjectServer,
+  ProjectServerCommand,
+  ProjectServerConfigRef,
+  ProjectServerUrl,
+  ProjectWatchSettings,
+} from "./project-config.js";
+export {
+  isProjectServerCommand,
+  isProjectServerConfigRef,
+  isProjectServerUrl,
+  PROJECT_CONFIG_FILENAME,
+  parseProjectConfig,
+  projectConfigSchema,
+} from "./project-config.js";
 export {
   detectKeyAlgorithm,
   parseSignatureFile,

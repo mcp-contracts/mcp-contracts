@@ -16,9 +16,15 @@ import {
   SEVERITY_ORDER,
 } from "@mcp-contracts/core";
 import { Command } from "commander";
-import type { TransportOptions } from "../transport.js";
-import { addTransportOptions, resolveTransport } from "../transport.js";
-import { handleErrors, readSnapshotFile } from "../utils.js";
+import type { LoadedProjectConfig } from "../project-config.js";
+import {
+  loadProjectConfig,
+  resolveBaselinePath,
+  resolveProjectPath,
+  resolveTransportOrProject,
+} from "../project-config.js";
+import { addTransportOptions } from "../transport.js";
+import { getRootOpts, handleErrors, readSnapshotFile } from "../utils.js";
 import {
   clearScreen,
   formatWatchCycle,
@@ -112,6 +118,53 @@ function checkFailThreshold(
   }
 }
 
+/** Watch options resolved from CLI flags and the project config. */
+interface ResolvedWatchOptions {
+  severity: Severity;
+  failOn: Severity;
+  debounceMs: number;
+  watchPaths: string[];
+  baselinePath: string;
+  webhookUrl: string | undefined;
+  shouldClear: boolean;
+}
+
+/**
+ * Resolves the watch command's options with flags > project config > defaults
+ * precedence.
+ *
+ * @param options - The raw parsed options record from the command action.
+ * @param project - The loaded project config, if any.
+ * @returns The fully resolved watch options.
+ */
+function resolveWatchOptions(
+  options: Record<string, unknown>,
+  project: LoadedProjectConfig | null,
+): ResolvedWatchOptions {
+  const severity = parseSeverity((options["severity"] as string) ?? "safe", "--severity");
+  const failOn = parseSeverity(
+    (options["failOn"] as string | undefined) ?? project?.config.failOn ?? "breaking",
+    "--fail-on",
+  );
+  const debounceMs = Number.parseInt(
+    (options["debounce"] as string | undefined) ?? String(project?.config.watch?.debounce ?? 500),
+    10,
+  );
+  const projectWatchPaths = project?.config.watch?.paths?.map((p) =>
+    resolveProjectPath(project, p),
+  );
+  const watchPaths = (options["watchPaths"] as string[] | undefined) ?? projectWatchPaths ?? ["."];
+  const baselinePath = resolveBaselinePath(options["baseline"] as string | undefined, project);
+  if (!baselinePath) {
+    throw new Error('--baseline is required (or set "baseline" in mcpcontracts.json)');
+  }
+  const webhookUrl = options["webhook"] as string | undefined;
+  const shouldClear =
+    options["clear"] === true || (options["clear"] === undefined && process.stdout.isTTY);
+
+  return { severity, failOn, debounceMs, watchPaths, baselinePath, webhookUrl, shouldClear };
+}
+
 /**
  * Creates the `watch` subcommand for the mcpdiff CLI.
  *
@@ -128,26 +181,21 @@ export function createWatchCommand(): Command {
   addTransportOptions(cmd);
 
   cmd
-    .requiredOption("--baseline <path>", "Path to baseline snapshot")
-    .option("--watch-paths <paths...>", "Paths to watch for changes", ["."])
-    .option("--debounce <ms>", "Debounce interval in milliseconds", "500")
+    .option("--baseline <path>", "Path to baseline snapshot")
+    .option("--watch-paths <paths...>", 'Paths to watch for changes (default: ".")')
+    .option("--debounce <ms>", "Debounce interval in milliseconds (default: 500)")
     .option("--severity <level>", "Minimum severity to display", "safe")
-    .option("--fail-on <level>", "Severity threshold", "breaking")
+    .option("--fail-on <level>", 'Severity threshold (default: "breaking")')
     .option("--webhook <url>", "POST diffs on each cycle")
     .option("--clear", "Clear screen between diffs")
     .action(
       handleErrors(async (options: Record<string, unknown>) => {
-        const parentOpts = cmd.parent?.opts() ?? {};
-        const quiet = parentOpts["quiet"] === true;
+        const rootOpts = getRootOpts(cmd);
+        const quiet = rootOpts["quiet"] === true;
+        const project = loadProjectConfig(rootOpts["project"] as string | undefined);
 
-        const severity = parseSeverity((options["severity"] as string) ?? "safe", "--severity");
-        const failOn = parseSeverity((options["failOn"] as string) ?? "breaking", "--fail-on");
-        const debounceMs = Number.parseInt(options["debounce"] as string, 10);
-        const watchPaths = options["watchPaths"] as string[];
-        const baselinePath = options["baseline"] as string;
-        const webhookUrl = options["webhook"] as string | undefined;
-        const shouldClear =
-          options["clear"] === true || (options["clear"] === undefined && process.stdout.isTTY);
+        const { severity, failOn, debounceMs, watchPaths, baselinePath, webhookUrl, shouldClear } =
+          resolveWatchOptions(options, project);
 
         const config = createWatchConfig({
           debounceMs,
@@ -156,17 +204,7 @@ export function createWatchCommand(): Command {
           failOn,
         });
 
-        const transportOpts: TransportOptions = {
-          command: options["command"] as string | undefined,
-          url: options["url"] as string | undefined,
-          config: options["config"] as string | undefined,
-          server: options["server"] as string | undefined,
-          args: options["args"] as string[] | undefined,
-          env: options["env"] as string[] | undefined,
-          sse: options["sse"] === true ? true : undefined,
-          header: options["header"] as string[] | undefined,
-        };
-        const transport = resolveTransport(transportOpts);
+        const transport = resolveTransportOrProject(options, project);
 
         // Print header
         process.stderr.write(formatWatchHeader(baselinePath, watchPaths, debounceMs));
