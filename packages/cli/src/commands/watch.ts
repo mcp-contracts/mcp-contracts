@@ -9,7 +9,7 @@ import {
   resolveTransportOrProject,
 } from "../project-config.js";
 import { addTransportOptions } from "../transport.js";
-import { getRootOpts, handleErrors, parseSeverity } from "../utils.js";
+import { getRootOpts, handleErrors, parseSeverity, printDeprecationNotice } from "../utils.js";
 import { runWatchLoop } from "../watch-loop.js";
 
 /** Watch options resolved from CLI flags and the project config. */
@@ -85,6 +85,9 @@ export function createWatchCommand(): Command {
       handleErrors(async (options: Record<string, unknown>) => {
         const rootOpts = getRootOpts(cmd);
         const quiet = rootOpts["quiet"] === true;
+        if (!quiet) {
+          printDeprecationNotice("mcpdiff watch", "mcpdiff check --watch");
+        }
         const project = loadProjectConfig(rootOpts["project"] as string | undefined);
 
         const { severity, failOn, debounceMs, watchPaths, baselinePath, webhookUrl, shouldClear } =

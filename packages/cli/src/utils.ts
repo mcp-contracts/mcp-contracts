@@ -19,6 +19,18 @@ export function parseSeverity(value: string, label: string): Severity {
 }
 
 /**
+ * Prints a one-line deprecation notice to stderr.
+ *
+ * @param oldSpelling - The deprecated command spelling (e.g. "mcpdiff ci").
+ * @param newSpelling - The replacement to point users at (e.g. "mcpdiff check").
+ */
+export function printDeprecationNotice(oldSpelling: string, newSpelling: string): void {
+  process.stderr.write(
+    `Warning: '${oldSpelling}' is deprecated and will be removed in a future release; use '${newSpelling}' instead\n`,
+  );
+}
+
+/**
  * Resolves the root program options from a possibly nested subcommand.
  *
  * @param cmd - The current Command instance.

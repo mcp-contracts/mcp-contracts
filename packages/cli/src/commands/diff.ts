@@ -19,6 +19,7 @@ import {
   CliExitError,
   handleErrors,
   parseSeverity,
+  printDeprecationNotice,
   readSnapshotFile,
   resolveFormat,
   stripAnsi,
@@ -128,6 +129,44 @@ async function runFileDiff(params: FileDiffOptions): Promise<void> {
 }
 
 /**
+ * Validates composition-diff arguments and delegates to executeCompositionDiff.
+ *
+ * @param baselineDir - The --baseline directory option value.
+ * @param beforePath - The first positional argument, which must be absent.
+ * @param options - The parsed command options.
+ * @param parentOpts - The root program's parsed options.
+ * @param severity - Minimum severity to display.
+ * @param failOn - Exit code 1 threshold.
+ */
+async function runCompositionDiff(
+  baselineDir: string,
+  beforePath: string | undefined,
+  options: Record<string, unknown>,
+  parentOpts: Record<string, unknown>,
+  severity: Severity,
+  failOn: Severity,
+): Promise<void> {
+  const configPath = options["config"] as string | undefined;
+  if (!configPath) {
+    throw new Error("--baseline requires --config");
+  }
+  if (beforePath) {
+    throw new Error("--baseline cannot be combined with snapshot file arguments");
+  }
+
+  await executeCompositionDiff({
+    configPath,
+    baselineDir,
+    minSeverity: severity,
+    failOn,
+    quiet: parentOpts["quiet"] === true,
+    format: resolveFormat(parentOpts["format"] as string | undefined),
+    noColor: parentOpts["color"] === false,
+    outputPath: parentOpts["output"] as string | undefined,
+  });
+}
+
+/**
  * Creates the `diff` subcommand for the mcpdiff CLI.
  *
  * Supports two modes:
@@ -162,30 +201,15 @@ export function createDiffCommand(): Command {
         const severity = parseSeverity(options["severity"] as string, "--severity");
         const failOn = parseSeverity(options["failOn"] as string, "--fail-on");
         const live = options["live"] === true;
-
         const parentOpts = cmd.parent?.opts() ?? {};
         const quiet = parentOpts["quiet"] === true;
+        if (live && !quiet) {
+          printDeprecationNotice("mcpdiff diff --live", "mcpdiff check");
+        }
 
         const baselineDir = options["baseline"] as string | undefined;
         if (baselineDir) {
-          const configPath = options["config"] as string | undefined;
-          if (!configPath) {
-            throw new Error("--baseline requires --config");
-          }
-          if (beforePath) {
-            throw new Error("--baseline cannot be combined with snapshot file arguments");
-          }
-
-          await executeCompositionDiff({
-            configPath,
-            baselineDir,
-            minSeverity: severity,
-            failOn,
-            quiet,
-            format: resolveFormat(parentOpts["format"] as string | undefined),
-            noColor: parentOpts["color"] === false,
-            outputPath: parentOpts["output"] as string | undefined,
-          });
+          await runCompositionDiff(baselineDir, beforePath, options, parentOpts, severity, failOn);
           return;
         }
 

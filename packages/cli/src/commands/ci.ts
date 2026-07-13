@@ -2,9 +2,7 @@ import { appendFileSync } from "node:fs";
 import {
   createWebhookPayload,
   diffSnapshots,
-  formatJson,
   formatMarkdown,
-  formatTerminal,
   SEVERITY_ORDER,
 } from "@mcp-contracts/core";
 import { Command } from "commander";
@@ -21,13 +19,13 @@ import {
   getRootOpts,
   handleErrors,
   parseSeverity,
+  printDeprecationNotice,
   readSnapshotFile,
-  resolveFormat,
-  stripAnsi,
   writeOutput,
 } from "../utils.js";
 import { sendWebhook } from "../webhook.js";
 import { captureSnapshot } from "./capture.js";
+import { formatReport, resolveCheckFormat } from "./check.js";
 
 /**
  * Creates the `ci` subcommand for the mcpdiff CLI.
@@ -55,6 +53,9 @@ export function createCiCommand(): Command {
       handleErrors(async (options: Record<string, unknown>) => {
         const rootOpts = getRootOpts(cmd);
         const quiet = rootOpts["quiet"] === true;
+        if (!quiet) {
+          printDeprecationNotice("mcpdiff ci", "mcpdiff check");
+        }
         const noColor = rootOpts["color"] === false;
         const outputPath = rootOpts["output"] as string | undefined;
         const explicitFormat = rootOpts["format"] as string | undefined;
@@ -93,33 +94,9 @@ export function createCiCommand(): Command {
         // Diff
         const report = diffSnapshots(baseline, current, { minSeverity: severity });
 
-        // Detect CI environment
         const ciEnv = detectCIEnvironment();
-
-        // Resolve format
-        let format: "terminal" | "json" | "markdown";
-        if (explicitFormat) {
-          format = resolveFormat(explicitFormat);
-        } else if (ciEnv.isCI) {
-          format = ciEnv.suggestedFormat as "json" | "markdown";
-        } else {
-          format = resolveFormat(undefined);
-        }
-
-        // Format report
-        let output: string;
-        if (format === "json") {
-          output = formatJson(report);
-        } else if (format === "markdown") {
-          output = formatMarkdown(report);
-        } else {
-          output = formatTerminal(report);
-        }
-
-        if (noColor && format === "terminal") {
-          output = stripAnsi(output);
-        }
-
+        const format = resolveCheckFormat(explicitFormat);
+        const output = formatReport(report, format, noColor);
         writeOutput(`${output}\n`, outputPath);
 
         // GitHub Actions step summary

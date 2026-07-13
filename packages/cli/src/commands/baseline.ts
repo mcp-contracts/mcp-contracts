@@ -13,6 +13,7 @@ import {
   CliExitError,
   getRootOpts,
   handleErrors,
+  printDeprecationNotice,
   readSnapshotFile,
   writeOutput,
 } from "../utils.js";
@@ -38,6 +39,9 @@ export function createBaselineUpdateCommand(): Command {
     handleErrors(async (options: Record<string, unknown>) => {
       const rootOpts = getRootOpts(cmd);
       const quiet = rootOpts["quiet"] === true;
+      if (!quiet) {
+        printDeprecationNotice("mcpdiff baseline update", "mcpdiff update");
+      }
       const project = loadProjectConfig(rootOpts["project"] as string | undefined);
       const outputPath =
         resolveBaselinePath(rootOpts["output"] as string | undefined, project) ??
@@ -80,6 +84,9 @@ export function createBaselineVerifyCommand(): Command {
       handleErrors(async (options: Record<string, unknown>) => {
         const rootOpts = getRootOpts(cmd);
         const quiet = rootOpts["quiet"] === true;
+        if (!quiet) {
+          printDeprecationNotice("mcpdiff baseline verify", "mcpdiff check");
+        }
         const project = loadProjectConfig(rootOpts["project"] as string | undefined);
         const baselinePath =
           resolveBaselinePath(options["baseline"] as string | undefined, project) ??

@@ -36,7 +36,7 @@ import { resolveWatchOptions } from "./watch.js";
  * @param explicitFormat - The --format value, if given.
  * @returns The resolved output format.
  */
-function resolveCheckFormat(explicitFormat: string | undefined): OutputFormat {
+export function resolveCheckFormat(explicitFormat: string | undefined): OutputFormat {
   if (explicitFormat) {
     return resolveFormat(explicitFormat);
   }
@@ -55,7 +55,7 @@ function resolveCheckFormat(explicitFormat: string | undefined): OutputFormat {
  * @param noColor - Strip ANSI colors from terminal output.
  * @returns The formatted report string.
  */
-function formatReport(report: DiffReport, format: OutputFormat, noColor: boolean): string {
+export function formatReport(report: DiffReport, format: OutputFormat, noColor: boolean): string {
   let output: string;
   if (format === "json") {
     output = formatJson(report);

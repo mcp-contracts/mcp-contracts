@@ -39,9 +39,9 @@ program
 
 program.addCommand(createCheckCommand());
 program.addCommand(createUpdateCommand());
-program.addCommand(createBaselineCommand());
+program.addCommand(createBaselineCommand(), { hidden: true });
 program.addCommand(createCheckConflictsCommand());
-program.addCommand(createCiCommand());
+program.addCommand(createCiCommand(), { hidden: true });
 program.addCommand(createDiffCommand());
 program.addCommand(createGraphCommand());
 program.addCommand(createInspectCommand());
@@ -49,6 +49,6 @@ program.addCommand(createSignCommand());
 program.addCommand(createSnapshotCommand());
 program.addCommand(createVerifyCommand());
 program.addCommand(createVerifyHashCommand());
-program.addCommand(createWatchCommand());
+program.addCommand(createWatchCommand(), { hidden: true });
 
 program.parse();
