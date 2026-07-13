@@ -613,3 +613,55 @@ describe("integration: init", () => {
     expect(forced.exitCode).toBe(0);
   });
 });
+
+describe("integration: test command", () => {
+  const FIXTURE_SERVER = resolve(import.meta.dirname, "fixtures/fixture-server.mjs");
+  let projectDir: string;
+
+  beforeEach(async () => {
+    projectDir = mkdtempSync(join(tmpdir(), "mcpc-test-cmd-"));
+    const init = await runCliIn(projectDir, "init", "--command", "node", "--args", FIXTURE_SERVER);
+    expect(init.exitCode).toBe(0);
+  });
+
+  afterEach(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it("runs the contract test suite with zero arguments via the project config", async () => {
+    const { stdout, exitCode } = await runCliIn(projectDir, "test", "--format", "json");
+    expect(exitCode).toBe(0);
+    const report = JSON.parse(stdout);
+    expect(report.summary.failed).toBe(0);
+    expect(report.summary.errors).toBe(0);
+    expect(report.summary.passed).toBeGreaterThan(0);
+  });
+
+  it("exits 1 when the live server does not conform to the contract", async () => {
+    const baselinePath = join(projectDir, "contracts", "baseline.mcpc.json");
+    const baseline = JSON.parse(readFileSync(baselinePath, "utf-8"));
+    baseline.tools.echo.description = "A different description than the server reports";
+    writeFileSync(baselinePath, JSON.stringify(baseline, null, 2), "utf-8");
+
+    const { stdout, exitCode } = await runCliIn(projectDir, "test", "--format", "json");
+    expect(exitCode).toBe(1);
+    const report = JSON.parse(stdout);
+    expect(report.summary.failed).toBeGreaterThan(0);
+  });
+
+  it("supports explicit contract path and transport flags", async () => {
+    const { exitCode } = await runCliIn(
+      projectDir,
+      "test",
+      join(projectDir, "contracts", "baseline.mcpc.json"),
+      "--command",
+      "node",
+      "--args",
+      FIXTURE_SERVER,
+      "--no-boundary",
+      "--format",
+      "json",
+    );
+    expect(exitCode).toBe(0);
+  });
+});

@@ -17,6 +17,7 @@ import { createInitCommand } from "./commands/init.js";
 import { createInspectCommand } from "./commands/inspect.js";
 import { createSignCommand } from "./commands/sign.js";
 import { createSnapshotCommand } from "./commands/snapshot.js";
+import { createTestCommand } from "./commands/test.js";
 import { createUpdateCommand } from "./commands/update.js";
 import { createVerifyCommand } from "./commands/verify.js";
 import { createVerifyHashCommand } from "./commands/verify-hash.js";
@@ -41,6 +42,7 @@ program
 program.addCommand(createInitCommand());
 program.addCommand(createCheckCommand());
 program.addCommand(createUpdateCommand());
+program.addCommand(createTestCommand());
 program.addCommand(createBaselineCommand(), { hidden: true });
 program.addCommand(createCheckConflictsCommand());
 program.addCommand(createCiCommand(), { hidden: true });
