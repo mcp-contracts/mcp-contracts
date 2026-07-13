@@ -115,6 +115,9 @@ program
   .option("--timeout <ms>", "Global timeout in ms", "120000")
   .option("-o, --output <path>", "Write report to file instead of stdout")
   .action(async (contractPath: string, opts: Record<string, unknown>) => {
+    process.stderr.write(
+      "Note: contract testing is now built into the mcpdiff CLI as 'mcpdiff test'; the mcp-test bin will be removed in a future release\n",
+    );
     try {
       const contract = readContract(contractPath);
 
