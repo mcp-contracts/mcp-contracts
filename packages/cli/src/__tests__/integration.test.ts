@@ -55,14 +55,20 @@ describe("integration: CLI", () => {
   describe("--help", () => {
     it("exits 0 and shows usage info", async () => {
       const { stdout, exitCode } = await runCli("--help");
-      expect(exitCode).toBe(0);
       expect(stdout).toContain("mcpdiff");
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("check");
+      expect(stdout).toContain("update");
       expect(stdout).toContain("snapshot");
       expect(stdout).toContain("diff");
       expect(stdout).toContain("inspect");
-      expect(stdout).toContain("baseline");
-      expect(stdout).toContain("ci");
-      expect(stdout).toContain("watch");
+    });
+
+    it("hides deprecated commands from usage info", async () => {
+      const { stdout } = await runCli("--help");
+      expect(stdout).not.toMatch(/^ {2}ci\b/m);
+      expect(stdout).not.toMatch(/^ {2}watch\b/m);
+      expect(stdout).not.toMatch(/^ {2}baseline\b/m);
     });
   });
 
@@ -401,5 +407,91 @@ describe("integration: project config (mcpcontracts.json)", () => {
     expect(exitCode).toBe(2);
     expect(stderr).toContain("--baseline");
     expect(stderr).toContain("mcpcontracts.json");
+  });
+});
+
+describe("integration: check and update", () => {
+  const FIXTURE_SERVER = resolve(import.meta.dirname, "fixtures/fixture-server.mjs");
+  let projectDir: string;
+
+  beforeEach(() => {
+    projectDir = mkdtempSync(join(tmpdir(), "mcpc-check-update-"));
+    writeFileSync(
+      join(projectDir, "mcpcontracts.json"),
+      JSON.stringify(
+        {
+          server: { command: "node", args: [FIXTURE_SERVER] },
+          baseline: "contracts/baseline.mcpc.json",
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+  });
+
+  afterEach(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it("update then check succeed with zero flags", async () => {
+    const update = await runCliIn(projectDir, "update");
+    expect(update.exitCode).toBe(0);
+    expect(update.stderr).toContain("Baseline written to");
+    expect(existsSync(join(projectDir, "contracts", "baseline.mcpc.json"))).toBe(true);
+
+    const check = await runCliIn(projectDir, "check", "--format", "json");
+    expect(check.exitCode).toBe(0);
+    expect(check.stderr).toContain("Contract unchanged");
+    const report = JSON.parse(check.stdout);
+    expect(report.changes).toHaveLength(0);
+  });
+
+  it("check exits 2 when the baseline file is missing", async () => {
+    const { stderr, exitCode } = await runCliIn(projectDir, "check");
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain("baseline.mcpc.json");
+  });
+
+  it("check --help shows the full consolidated flag surface", async () => {
+    const { stdout, exitCode } = await runCli("check", "--help");
+    expect(exitCode).toBe(0);
+    for (const flag of [
+      "--baseline",
+      "--fail-on",
+      "--severity",
+      "--webhook",
+      "--verify-signature",
+      "--signature-key",
+      "--watch",
+      "--watch-paths",
+      "--debounce",
+      "--clear",
+      "--command",
+      "--url",
+    ]) {
+      expect(stdout).toContain(flag);
+    }
+  });
+
+  it("deprecated spellings still work and print a notice", async () => {
+    await runCliIn(projectDir, "update");
+
+    const baselineVerify = await runCliIn(projectDir, "baseline", "verify");
+    expect(baselineVerify.exitCode).toBe(0);
+    expect(baselineVerify.stderr).toContain("deprecated");
+    expect(baselineVerify.stderr).toContain("mcpdiff check");
+
+    const baselineUpdate = await runCliIn(projectDir, "baseline", "update");
+    expect(baselineUpdate.exitCode).toBe(0);
+    expect(baselineUpdate.stderr).toContain("mcpdiff update");
+
+    const ci = await runCliIn(projectDir, "ci", "--format", "json");
+    expect(ci.exitCode).toBe(0);
+    expect(ci.stderr).toContain("mcpdiff check");
+
+    const diffLive = await runCliIn(projectDir, "diff", "--live", "--format", "json");
+    expect(diffLive.exitCode).toBe(0);
+    expect(diffLive.stderr).toContain("mcpdiff check");
   });
 });

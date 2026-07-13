@@ -20,6 +20,9 @@ import type { ResolvedTransport } from "./commands/mcp-client.js";
 import { readMcpConfig } from "./mcp-config.js";
 import { extractTransportOptions, hasTransportFlags, resolveTransport } from "./transport.js";
 
+/** Default baseline path used when neither flags nor config specify one. */
+export const DEFAULT_BASELINE_PATH = "contracts/baseline.mcpc.json";
+
 /** A project config together with where it was found. */
 export interface LoadedProjectConfig {
   /** Absolute path to the config file. */

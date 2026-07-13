@@ -1,16 +1,12 @@
-import { appendFileSync, readFileSync } from "node:fs";
-import type { MCPContractSnapshot, Severity } from "@mcp-contracts/core";
+import { appendFileSync } from "node:fs";
 import {
   createWebhookPayload,
   diffSnapshots,
-  formatJson,
   formatMarkdown,
-  formatTerminal,
-  parseSignatureFile,
   SEVERITY_ORDER,
-  verifySignature,
 } from "@mcp-contracts/core";
 import { Command } from "commander";
+import { verifyBaselineSignature } from "../baseline-signature.js";
 import { detectCIEnvironment } from "../ci-env.js";
 import {
   loadProjectConfig,
@@ -22,30 +18,14 @@ import {
   CliExitError,
   getRootOpts,
   handleErrors,
+  parseSeverity,
+  printDeprecationNotice,
   readSnapshotFile,
-  resolveFormat,
-  stripAnsi,
   writeOutput,
 } from "../utils.js";
 import { sendWebhook } from "../webhook.js";
 import { captureSnapshot } from "./capture.js";
-import { deriveSignaturePath } from "./sign.js";
-
-const VALID_SEVERITIES = new Set<string>(["safe", "warning", "breaking"]);
-
-/**
- * Validates a severity level string.
- *
- * @param value - The string to validate.
- * @param label - Label for the option (used in error messages).
- * @returns The validated Severity value.
- */
-function parseSeverity(value: string, label: string): Severity {
-  if (!VALID_SEVERITIES.has(value)) {
-    throw new Error(`Invalid ${label} value "${value}". Must be one of: safe, warning, breaking`);
-  }
-  return value as Severity;
-}
+import { formatReport, resolveCheckFormat } from "./check.js";
 
 /**
  * Creates the `ci` subcommand for the mcpdiff CLI.
@@ -73,6 +53,9 @@ export function createCiCommand(): Command {
       handleErrors(async (options: Record<string, unknown>) => {
         const rootOpts = getRootOpts(cmd);
         const quiet = rootOpts["quiet"] === true;
+        if (!quiet) {
+          printDeprecationNotice("mcpdiff ci", "mcpdiff check");
+        }
         const noColor = rootOpts["color"] === false;
         const outputPath = rootOpts["output"] as string | undefined;
         const explicitFormat = rootOpts["format"] as string | undefined;
@@ -111,33 +94,9 @@ export function createCiCommand(): Command {
         // Diff
         const report = diffSnapshots(baseline, current, { minSeverity: severity });
 
-        // Detect CI environment
         const ciEnv = detectCIEnvironment();
-
-        // Resolve format
-        let format: "terminal" | "json" | "markdown";
-        if (explicitFormat) {
-          format = resolveFormat(explicitFormat);
-        } else if (ciEnv.isCI) {
-          format = ciEnv.suggestedFormat as "json" | "markdown";
-        } else {
-          format = resolveFormat(undefined);
-        }
-
-        // Format report
-        let output: string;
-        if (format === "json") {
-          output = formatJson(report);
-        } else if (format === "markdown") {
-          output = formatMarkdown(report);
-        } else {
-          output = formatTerminal(report);
-        }
-
-        if (noColor && format === "terminal") {
-          output = stripAnsi(output);
-        }
-
+        const format = resolveCheckFormat(explicitFormat);
+        const output = formatReport(report, format, noColor);
         writeOutput(`${output}\n`, outputPath);
 
         // GitHub Actions step summary
@@ -173,80 +132,4 @@ export function createCiCommand(): Command {
     );
 
   return cmd;
-}
-
-/**
- * Verifies the baseline snapshot's signature before diffing.
- *
- * @param baseline - The parsed baseline snapshot.
- * @param baselinePath - File path to the baseline (used to derive sig path).
- * @param signatureKeyOption - The --signature-key option value, if provided.
- * @param quiet - Whether to suppress non-essential output.
- */
-function verifyBaselineSignature(
-  baseline: MCPContractSnapshot,
-  baselinePath: string,
-  signatureKeyOption: string | undefined,
-  quiet: boolean,
-): void {
-  const keyPem = resolveSignatureKey(signatureKeyOption);
-  const sigPath = deriveSignaturePath(baselinePath);
-
-  let sigJson: string;
-  try {
-    sigJson = readFileSync(sigPath, "utf-8");
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`Failed to read baseline signature file "${sigPath}": ${message}`);
-  }
-
-  const sig = parseSignatureFile(sigJson);
-  const result = verifySignature(baseline, sig, keyPem);
-
-  if (!result.valid) {
-    process.stderr.write(`Baseline signature verification failed: ${result.error}\n`);
-    throw new CliExitError(2);
-  }
-
-  if (!quiet) {
-    process.stderr.write("Baseline signature verified\n");
-  }
-}
-
-/**
- * Resolves the public key PEM for signature verification.
- *
- * Checks the `--signature-key` option first, then the `MCP_SIGNATURE_KEY`
- * environment variable. The env var can contain PEM content directly
- * (starts with "-----BEGIN") or a file path.
- *
- * @param optionValue - The --signature-key option value, if provided.
- * @returns The PEM string for the public key.
- */
-function resolveSignatureKey(optionValue: string | undefined): string {
-  if (optionValue) {
-    try {
-      return readFileSync(optionValue, "utf-8");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      throw new Error(`Failed to read signature key file "${optionValue}": ${message}`);
-    }
-  }
-
-  const envValue = process.env["MCP_SIGNATURE_KEY"];
-  if (envValue) {
-    if (envValue.startsWith("-----BEGIN")) {
-      return envValue;
-    }
-    try {
-      return readFileSync(envValue, "utf-8");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      throw new Error(`Failed to read key from MCP_SIGNATURE_KEY path "${envValue}": ${message}`);
-    }
-  }
-
-  throw new Error(
-    "--verify-signature requires --signature-key <path> or MCP_SIGNATURE_KEY environment variable",
-  );
 }

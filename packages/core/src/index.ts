@@ -32,7 +32,7 @@ export type {
   ServerSnapshotEntry,
   ToolCollision,
 } from "./composition-types.js";
-export { diffSnapshots } from "./diff.js";
+export { createEmptyDiffReport, diffSnapshots } from "./diff.js";
 export type {
   ChangeCategory,
   ChangeType,

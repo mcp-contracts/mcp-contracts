@@ -337,6 +337,27 @@ function diffPrompts(before: MCPContractSnapshot, after: MCPContractSnapshot): S
 }
 
 /**
+ * Builds a no-changes diff report without running the diff engine.
+ *
+ * Used as a fast path when the caller already knows the snapshots are
+ * identical (e.g. matching content hashes on honestly generated snapshots).
+ *
+ * @param before - The baseline snapshot.
+ * @param after - The updated snapshot.
+ * @returns A DiffReport with empty changes and zeroed summary counts.
+ */
+export function createEmptyDiffReport(
+  before: MCPContractSnapshot,
+  after: MCPContractSnapshot,
+): DiffReport {
+  return {
+    meta: buildMeta(before, after),
+    summary: buildSummary([]),
+    changes: [],
+  };
+}
+
+/**
  * Compares two MCP Contract Snapshots and returns a detailed diff report.
  *
  * @param before - The baseline snapshot.
