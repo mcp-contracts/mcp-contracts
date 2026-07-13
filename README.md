@@ -1,10 +1,43 @@
-# mcp-contracts
+<div align="center">
 
-**Your MCP server updated. Did the tool schemas change? Did descriptions get rewritten with hidden instructions? You'd never know — until now.**
+# 🔏 mcp-contracts
 
-`mcpdiff` captures versioned snapshots of MCP server tool schemas and detects breaking changes, drift, and potential [tool poisoning](https://owasp.org/www-project-mcp-top-10/2025/MCP03-2025%E2%80%93Tool-Poisoning) vectors.
+### Contract safety for MCP servers
 
-Pin your contracts. Diff your tools. Ship with confidence.
+**Pin your tool schemas. Diff every change. Catch breaking changes and tool poisoning before your agents do.**
+
+[![npm version](https://img.shields.io/npm/v/%40mcp-contracts%2Fcli?label=npm&color=cb3837)](https://www.npmjs.com/package/@mcp-contracts/cli)
+[![CI](https://github.com/mcp-contracts/mcp-contracts/actions/workflows/ci.yml/badge.svg)](https://github.com/mcp-contracts/mcp-contracts/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![node >= 20](https://img.shields.io/badge/node-%3E%3D%2020-brightgreen)](https://nodejs.org)
+
+[Quick Start](#quick-start) · [Commands](#commands) · [Project Config](#project-config-mcpcontractsjson) · [CI Integration](#ci-integration) · [Packages](#packages)
+
+<br>
+
+```
+  mcp-contracts diff — acme-server v1.0.0 → v1.1.0
+
+  🔴 BREAKING  tool "create_contact" — required parameter "phone" added
+  🟡 WARNING   tool "search_contacts" — description changed
+  🟢 SAFE      tool "export_csv" — new tool added
+
+  Summary: 1 breaking · 1 warning · 1 safe
+```
+
+</div>
+
+Your MCP server updated. Did the tool schemas change? Did descriptions get rewritten with hidden instructions? You'd never know — until now. `mcpdiff` treats MCP tool schemas as **contracts**: versionable, diffable, testable, and signable artifacts.
+
+## Highlights
+
+- ⚡ **Two-command onboarding** — `mcpdiff init` writes your project config and captures the baseline; `mcpdiff check` does the rest, locally and in CI
+- 🔍 **Semantic diff engine** — every schema change classified as 🔴 breaking, 🟡 warning, or 🟢 safe, with CI-friendly exit codes
+- 🛡️ **Tool-poisoning defense** — description changes are never silent; they're warnings you review ([OWASP MCP03](https://owasp.org/www-project-mcp-top-10/2025/MCP03-2025%E2%80%93Tool-Poisoning))
+- 🧪 **Contract testing** — `mcpdiff test` verifies a live server actually conforms: schema conformance plus boundary inputs
+- ✍️ **Signed baselines** — Ed25519/RSA detached signatures with `sign`/`verify`, enforceable in CI via `check --verify-signature`
+- 🧩 **Multi-server aware** — snapshot, diff, and conflict-check whole mcp.json compositions; render dependency graphs
+- 🤖 **CI-native** — auto-detects GitHub Actions/GitLab/CircleCI, writes step summaries, ships a [GitHub Action](https://github.com/mcp-contracts/github-action)
 
 ## The Problem
 
@@ -14,7 +47,7 @@ MCP servers expose tools, resources, and prompts to AI agents. These interfaces 
 - **Description changes are invisible.** Tool descriptions are the primary vector for [tool poisoning attacks](https://owasp.org/www-project-mcp-top-10/2025/MCP03-2025%E2%80%93Tool-Poisoning) — and nobody reviews them.
 - **There's no contract to pin.** Agents trust whatever schema the server serves at runtime, with no way to detect drift.
 
-`mcpdiff` solves this by treating MCP tool schemas as **contracts** — versionable, diffable, and auditable artifacts.
+`mcpdiff` closes that gap: capture a baseline once, then every change to your server's interface is diffed, classified, and gated before it ships.
 
 ## Quick Start
 
@@ -35,17 +68,6 @@ npx @mcp-contracts/cli snapshot --command "node ./my-server/dist/index.js" -o v1
 # ... make changes ...
 npx @mcp-contracts/cli snapshot --command "node ./my-server/dist/index.js" -o v2.mcpc.json
 npx @mcp-contracts/cli diff v1.mcpc.json v2.mcpc.json
-```
-
-Output:
-```
-  mcp-contracts diff — acme-server v1.0.0 → v1.1.0
-
-  🔴 BREAKING  tool "create_contact" — required parameter "phone" added
-  🟡 WARNING   tool "search_contacts" — description changed
-  🟢 SAFE      tool "export_csv" — new tool added
-
-  Summary: 1 breaking · 1 warning · 1 safe
 ```
 
 ## Commands
