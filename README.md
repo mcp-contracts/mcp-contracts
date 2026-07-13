@@ -52,6 +52,24 @@ Output:
 
 > Migrating from an older version? `ci`, `watch`, `baseline verify`, `baseline update`, `diff --live`, and `verify-hash` still work but are deprecated — they are replaced by `check` (with `--watch`), `update`, and `verify` (without `--key`), and will be removed in a future release.
 
+### `mcpdiff test`
+
+Runs the contract test suite from `@mcp-contracts/test` against a live server: schema conformance (every tool in the contract exists with a matching schema) plus boundary input tests.
+
+```bash
+# With a project config, zero arguments
+mcpdiff test
+
+# Explicit contract and transport
+mcpdiff test contract.mcpc.json --command node --args server.js
+mcpdiff test contract.mcpc.json --url http://localhost:3000/mcp --allow-extra-tools
+
+# Tune the suite
+mcpdiff test --no-boundary --skip-tools delete_contact --timeout 60000
+```
+
+**Exit codes:** `0` = all pass, `1` = failures, `2` = error. The standalone `mcp-test` bin still works but points here; the `@mcp-contracts/test` package remains the library for vitest integration.
+
 ### `mcpdiff snapshot`
 
 Connects to an MCP server and captures its complete tool/resource/prompt interface as a `.mcpc.json` file.
@@ -365,6 +383,7 @@ The `check` command auto-detects the CI environment and selects the right output
 |---------|-------------|
 | [`@mcp-contracts/core`](./packages/core) | Snapshot types, diff engine, classification logic |
 | [`@mcp-contracts/cli`](./packages/cli) | The `mcpdiff` CLI tool |
+| [`@mcp-contracts/test`](./packages/test) | Contract testing library: conformance + boundary runner, vitest matchers |
 
 ---
 
