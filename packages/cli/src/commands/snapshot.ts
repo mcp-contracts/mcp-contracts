@@ -2,9 +2,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Command } from "commander";
 import { listConfigServers } from "../mcp-config.js";
-import type { TransportOptions } from "../transport.js";
-import { addTransportOptions, resolveTransport } from "../transport.js";
-import { handleErrors, writeOutput } from "../utils.js";
+import { loadProjectConfig, resolveTransportOrProject } from "../project-config.js";
+import { addTransportOptions } from "../transport.js";
+import { getRootOpts, handleErrors, writeOutput } from "../utils.js";
 import { captureSnapshot } from "./capture.js";
 import { captureAllServers } from "./capture-all.js";
 
@@ -63,9 +63,9 @@ export function createSnapshotCommand(): Command {
 
   cmd.action(
     handleErrors(async (options: Record<string, unknown>) => {
-      const parentOpts = cmd.parent?.opts() ?? {};
-      const outputPath = parentOpts["output"] as string | undefined;
-      const quiet = parentOpts["quiet"] === true;
+      const rootOpts = getRootOpts(cmd);
+      const outputPath = rootOpts["output"] as string | undefined;
+      const quiet = rootOpts["quiet"] === true;
 
       if (options["all"] === true) {
         const configPath = options["config"] as string | undefined;
@@ -76,17 +76,8 @@ export function createSnapshotCommand(): Command {
         return;
       }
 
-      const transportOpts: TransportOptions = {
-        command: options["command"] as string | undefined,
-        url: options["url"] as string | undefined,
-        config: options["config"] as string | undefined,
-        server: options["server"] as string | undefined,
-        args: options["args"] as string[] | undefined,
-        env: options["env"] as string[] | undefined,
-        sse: options["sse"] === true ? true : undefined,
-        header: options["header"] as string[] | undefined,
-      };
-      const config = resolveTransport(transportOpts);
+      const project = loadProjectConfig(rootOpts["project"] as string | undefined);
+      const config = resolveTransportOrProject(options, project);
 
       const { snapshot } = await captureSnapshot({ transport: config, quiet });
 

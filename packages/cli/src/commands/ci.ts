@@ -12,10 +12,15 @@ import {
 } from "@mcp-contracts/core";
 import { Command } from "commander";
 import { detectCIEnvironment } from "../ci-env.js";
-import type { TransportOptions } from "../transport.js";
-import { addTransportOptions, resolveTransport } from "../transport.js";
+import {
+  loadProjectConfig,
+  resolveBaselinePath,
+  resolveTransportOrProject,
+} from "../project-config.js";
+import { addTransportOptions } from "../transport.js";
 import {
   CliExitError,
+  getRootOpts,
   handleErrors,
   readSnapshotFile,
   resolveFormat,
@@ -58,8 +63,8 @@ export function createCiCommand(): Command {
   addTransportOptions(cmd);
 
   cmd
-    .requiredOption("--baseline <path>", "Path to baseline snapshot (required)")
-    .option("--fail-on <level>", "Severity threshold for exit code 1", "breaking")
+    .option("--baseline <path>", "Path to baseline snapshot")
+    .option("--fail-on <level>", 'Severity threshold for exit code 1 (default: "breaking")')
     .option("--severity <level>", "Minimum severity to display", "safe")
     .option("--webhook <url>", "POST diff results to a webhook URL")
     .option("--verify-signature", "Require valid signature on baseline before diffing")
@@ -72,32 +77,34 @@ export function createCiCommand(): Command {
         const outputPath = rootOpts["output"] as string | undefined;
         const explicitFormat = rootOpts["format"] as string | undefined;
 
-        const severity = parseSeverity(options["severity"] as string, "--severity");
-        const failOn = parseSeverity(options["failOn"] as string, "--fail-on");
+        const project = loadProjectConfig(rootOpts["project"] as string | undefined);
 
-        const baseline = readSnapshotFile(options["baseline"] as string);
+        const severity = parseSeverity(options["severity"] as string, "--severity");
+        const failOn = parseSeverity(
+          (options["failOn"] as string | undefined) ?? project?.config.failOn ?? "breaking",
+          "--fail-on",
+        );
+
+        const baselinePath = resolveBaselinePath(
+          options["baseline"] as string | undefined,
+          project,
+        );
+        if (!baselinePath) {
+          throw new Error('--baseline is required (or set "baseline" in mcpcontracts.json)');
+        }
+        const baseline = readSnapshotFile(baselinePath);
 
         // Verify baseline signature if requested
         if (options["verifySignature"] === true) {
           verifyBaselineSignature(
             baseline,
-            options["baseline"] as string,
+            baselinePath,
             options["signatureKey"] as string | undefined,
             quiet,
           );
         }
 
-        const transportOpts: TransportOptions = {
-          command: options["command"] as string | undefined,
-          url: options["url"] as string | undefined,
-          config: options["config"] as string | undefined,
-          server: options["server"] as string | undefined,
-          args: options["args"] as string[] | undefined,
-          env: options["env"] as string[] | undefined,
-          sse: options["sse"] === true ? true : undefined,
-          header: options["header"] as string[] | undefined,
-        };
-        const config = resolveTransport(transportOpts);
+        const config = resolveTransportOrProject(options, project);
 
         const { snapshot: current } = await captureSnapshot({ transport: config, quiet });
 
@@ -144,7 +151,7 @@ export function createCiCommand(): Command {
         if (webhookUrl) {
           const payload = createWebhookPayload(report, {
             trigger: "ci",
-            baselinePath: options["baseline"] as string,
+            baselinePath,
           });
           const webhookResult = await sendWebhook(webhookUrl, payload);
           if (!webhookResult.success) {
@@ -166,20 +173,6 @@ export function createCiCommand(): Command {
     );
 
   return cmd;
-}
-
-/**
- * Resolves the root program options from a deeply nested subcommand.
- *
- * @param cmd - The current Command instance.
- * @returns The root program's parsed options.
- */
-function getRootOpts(cmd: Command): Record<string, unknown> {
-  let current: Command | null = cmd;
-  while (current.parent) {
-    current = current.parent;
-  }
-  return current.opts();
 }
 
 /**

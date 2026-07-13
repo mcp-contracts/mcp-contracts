@@ -238,12 +238,13 @@ describe("baseline command", () => {
       expect(stderrData).toContain("Failed to read snapshot file");
     });
 
-    it("uses default baseline path", () => {
+    it("has no commander default for --baseline so the project config can supply it", () => {
       const program = createProgram();
       const baselineCmd = program.commands.find((c) => c.name() === "baseline");
       const verifyCmd = baselineCmd?.commands.find((c) => c.name() === "verify");
       const baselineOpt = verifyCmd?.options.find((o) => o.long === "--baseline");
-      expect(baselineOpt?.defaultValue).toBe("contracts/baseline.mcpc.json");
+      expect(baselineOpt?.defaultValue).toBeUndefined();
+      expect(baselineOpt?.description).toContain("contracts/baseline.mcpc.json");
     });
   });
 });
