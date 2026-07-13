@@ -1,6 +1,6 @@
 # @mcp-contracts/cli
 
-The `mcpdiff` CLI tool — capture, diff, and inspect MCP server tool schemas.
+The `mcpdiff` CLI tool — capture, check, test, and sign MCP server tool schemas.
 
 Detects breaking changes, description drift, and potential [tool poisoning](https://owasp.org/www-project-mcp-top-10/2025/MCP03-2025%E2%80%93Tool-Poisoning) vectors in MCP servers.
 
@@ -10,201 +10,120 @@ Detects breaking changes, description drift, and potential [tool poisoning](http
 npm install -g @mcp-contracts/cli
 ```
 
-Or run directly with npx:
+## Quick Start
 
 ```bash
-npx @mcp-contracts/cli snapshot --command "node server.js" -o snapshot.mcpc.json
+# One-command setup: writes mcpcontracts.json and captures the baseline
+npx @mcp-contracts/cli init --command node --args dist/index.js
+
+# From then on — zero flags, locally and in CI
+npx @mcp-contracts/cli check
+```
+
+`init` writes an `mcpcontracts.json` project config so every later invocation knows your server and baseline. The file is discovered by walking up from the current directory (like `tsconfig.json`); explicit CLI flags always override it, and passing any transport flag ignores its `server` block entirely.
+
+```jsonc
+{
+  "server": { "command": "node", "args": ["dist/index.js"] },
+  // or: "url": "http://localhost:3000/mcp" — or: "config": "./mcp.json", "name": "my-server"
+  "baseline": "contracts/baseline.mcpc.json",
+  "failOn": "breaking",
+  "watch": { "paths": ["src"], "debounce": 500 }
+}
 ```
 
 ## Global Options
 
+Available on every command, in any position:
+
 ```
 --format <format>    Output format: terminal | json | markdown
+-o, --output <path>  Write output to a file instead of stdout
 --no-color           Disable colored output
--o, --output <path>  Output file path
 --quiet              Suppress non-essential output
 --verbose            Show detailed information
+--project <path>     Path to mcpcontracts.json (default: discovered from the CWD)
+-V, --version        Print the CLI version
 ```
 
 ## Transport Options
 
-Most commands accept transport options to connect to a live MCP server:
+Commands that connect to a live server accept:
 
 ```
 --command <cmd>       Server command to run via stdio transport
 --args <args...>      Arguments for the server command
+--env <pairs...>      Environment variables as KEY=VALUE pairs
 --url <url>           Server URL for streamable-http or SSE transport
 --sse                 Use SSE transport instead of streamable-http (requires --url)
 --header <header...>  Custom HTTP headers as "Key: Value" (repeatable)
 --config <path>       Path to mcp.json config file
 --server <name>       Server name from config file
---env <pairs...>      Environment variables as KEY=VALUE pairs
 ```
 
-Exactly one of `--command`, `--url`, or `--config` must be specified.
+Specify one of `--command`, `--url`, or `--config` — or none, with a `server` block in `mcpcontracts.json`.
 
 ## Commands
 
-### `mcpdiff snapshot`
+### `mcpdiff init`
 
-Connects to an MCP server and captures its tool/resource/prompt interface as a `.mcpc.json` file.
+One-command onboarding: writes `mcpcontracts.json`, captures the initial baseline, and prints next steps including a CI workflow snippet. Interactive on a TTY (offers servers from `./mcp.json`); fully scriptable via transport flags; `--force` to overwrite.
+
+### `mcpdiff check`
+
+Captures the live server, diffs it against the baseline, reports, and sets the exit code. Detects CI environments (format selection, `GITHUB_STEP_SUMMARY`).
 
 ```bash
-# Via stdio transport
-mcpdiff snapshot --command "node server.js" -o snapshot.mcpc.json
-
-# Via HTTP transport
-mcpdiff snapshot --url http://localhost:3000/mcp -o snapshot.mcpc.json
-
-# Via SSE transport with custom headers
-mcpdiff snapshot --url http://localhost:3000/sse --sse --header "Authorization: Bearer token" -o snapshot.mcpc.json
-
-# From an mcp.json config file
-mcpdiff snapshot --config ./mcp.json --server my-server -o snapshot.mcpc.json
-
-# Snapshot every server in the config at once (one file per server)
-mcpdiff snapshot --config ./mcp.json --all --out-dir contracts/
+mcpdiff check                        # zero flags with a project config
+mcpdiff check --fail-on warning      # stricter threshold
+mcpdiff check --severity breaking    # only show breaking changes
+mcpdiff check --watch --watch-paths src --debounce 1000 --clear
+mcpdiff check --verify-signature --signature-key ./public.pem
+mcpdiff check --webhook https://example.com/hook
 ```
+
+**Exit codes:** `0` = clean, `1` = changes at or above the `--fail-on` threshold, `2` = error.
+
+### `mcpdiff update`
+
+Captures the live server and writes the baseline (`--baseline <path>` to override; default `contracts/baseline.mcpc.json`).
+
+### `mcpdiff test`
+
+Runs the contract test suite from `@mcp-contracts/test`: schema conformance plus boundary input tests.
+
+```bash
+mcpdiff test                         # zero args with a project config
+mcpdiff test contract.mcpc.json --command node --args server.js
+mcpdiff test --no-boundary --no-conformance --allow-extra-tools \
+  --ignore-descriptions --skip-tools dangerous_tool --timeout 60000
+```
+
+### `mcpdiff snapshot`
+
+Captures an ad-hoc snapshot as a `.mcpc.json` file (`-o <path>`); `--all --out-dir <dir>` snapshots every server in an mcp.json config.
 
 ### `mcpdiff diff`
 
-Compares two snapshots and classifies every change as breaking, warning, or safe.
-
-```bash
-mcpdiff diff before.mcpc.json after.mcpc.json
-
-# Diff a baseline against a live server
-mcpdiff diff baseline.mcpc.json --live --command "node server.js"
-
-# Fail CI on warnings too
-mcpdiff diff before.mcpc.json after.mcpc.json --fail-on warning
-
-# Output as JSON
-mcpdiff diff before.mcpc.json after.mcpc.json --format json
-
-# Send results to a webhook
-mcpdiff diff before.mcpc.json after.mcpc.json --webhook https://example.com/hook
-```
-
-**Options:**
-
-```
---live               Diff baseline against a live server instead of a file
---baseline <dir>     Diff all config servers against baselines in this directory (requires --config)
---severity <level>   Minimum severity to display: safe | warning | breaking (default: "safe")
---fail-on <level>    Exit code 1 threshold: safe | warning | breaking (default: "breaking")
---webhook <url>      POST diff results to a webhook URL
-```
-
-**Exit codes:** `0` = no breaking changes, `1` = breaking changes detected, `2` = error.
-
-Composition mode diffs every server in an mcp.json config against its baseline directory:
-
-```bash
-mcpdiff diff --config ./mcp.json --baseline contracts/
-```
+Compares two snapshot files and classifies every change as breaking, warning, or safe (`--severity`, `--fail-on`, `--webhook`). `mcpdiff diff --config ./mcp.json --baseline <dir>` diffs a whole composition against per-server baselines.
 
 ### `mcpdiff check-conflicts`
 
-Detects duplicate tool names across the servers of an mcp.json config.
-
-```bash
-mcpdiff check-conflicts --config ./mcp.json
-
-# Only fail on schema conflicts, tolerate identical duplicates
-mcpdiff check-conflicts --config ./mcp.json --fail-on conflicting
-```
-
-**Exit codes:** `0` = no collisions, `1` = collisions found, `2` = error.
+Detects duplicate tool names across the servers of an mcp.json config (`--fail-on conflicting` to tolerate identical duplicates).
 
 ### `mcpdiff graph`
 
-Renders a dependency graph of all servers in an mcp.json config.
+Renders a dependency graph of all servers in an mcp.json config (`--format mermaid | dot | json`).
 
-```bash
-mcpdiff graph --config ./mcp.json
-mcpdiff --format mermaid graph --config ./mcp.json   # also: dot, json
-```
+### `mcpdiff sign` / `mcpdiff verify`
 
-### `mcpdiff baseline`
-
-Manage contract baselines — capture and verify snapshots against a committed baseline.
-
-```bash
-# Capture a baseline (default: contracts/baseline.mcpc.json)
-mcpdiff baseline update --command "node server.js"
-
-# Write to a custom path
-mcpdiff -o custom/path.mcpc.json baseline update --command "node server.js"
-
-# Verify the server still matches the baseline
-mcpdiff baseline verify --command "node server.js"
-mcpdiff baseline verify --baseline custom/path.mcpc.json --url http://localhost:3000/mcp
-```
-
-### `mcpdiff ci`
-
-All-in-one CI command: captures a snapshot, diffs against a baseline, outputs the report, and sets the exit code. Auto-detects CI environments (GitHub Actions, GitLab CI, CircleCI).
-
-```bash
-mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js"
-
-# Fail on warnings too
-mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js" --fail-on warning
-
-# Only show breaking changes
-mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js" --severity breaking
-
-# Send results to a webhook
-mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node server.js" --webhook https://example.com/hook
-```
-
-**Options:**
-
-```
---baseline <path>    Path to baseline snapshot (required)
---fail-on <level>    Severity threshold for exit code 1 (default: "breaking")
---severity <level>   Minimum severity to display (default: "safe")
---webhook <url>      POST diff results to a webhook URL
-```
-
-### `mcpdiff watch`
-
-Watch for file changes and re-diff against a baseline on every change. Useful during development.
-
-```bash
-mcpdiff watch --baseline contracts/baseline.mcpc.json --command "node server.js"
-
-# Watch specific paths with custom debounce
-mcpdiff watch --baseline contracts/baseline.mcpc.json --command "node server.js" \
-  --watch-paths src lib --debounce 1000
-
-# Send diffs to a webhook on each cycle
-mcpdiff watch --baseline contracts/baseline.mcpc.json --command "node server.js" \
-  --webhook https://example.com/hook
-```
-
-**Options:**
-
-```
---baseline <path>         Path to baseline snapshot (required)
---watch-paths <paths...>  Paths to watch for changes (default: ["."])
---debounce <ms>           Debounce interval in milliseconds (default: 500)
---severity <level>        Minimum severity to display (default: "safe")
---fail-on <level>         Severity threshold (default: "breaking")
---webhook <url>           POST diffs on each cycle
---clear                   Clear screen between diffs (auto-enabled if stdout is TTY)
-```
+Sign a snapshot with an Ed25519 or RSA private key (detached `.mcpc.sig`); verify integrity/authenticity. `verify` without `--key` checks the content hash only and says so; with `--key` it verifies hash, binding, and signature. `--signature <path>` overrides the derived sig path.
 
 ### `mcpdiff inspect`
 
-Summarizes a snapshot file.
+Summarizes a snapshot file (`--tools`, `--resources`, `--prompts`, `--schema <tool>`).
 
-```bash
-mcpdiff inspect snapshot.mcpc.json
-mcpdiff inspect snapshot.mcpc.json --tools
-mcpdiff inspect snapshot.mcpc.json --schema create_contact
-```
+> **Deprecated:** `ci`, `watch`, `baseline update`, `baseline verify`, `diff --live`, and `verify-hash` still work but are hidden and print a notice — replaced by `check` (with `--watch`), `update`, and `verify`.
 
 ## CI Integration
 
@@ -217,8 +136,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm install -g @mcp-contracts/cli
-      - run: mcpdiff ci --baseline contracts/baseline.mcpc.json --command "node dist/index.js"
+      - run: mcpdiff check   # reads the committed mcpcontracts.json
 ```
+
+Full documentation: [mcp-contracts on GitHub](https://github.com/mcp-contracts/mcp-contracts#readme)
+
 ---
 *mcp-contracts is an open-source project (MIT license). It's community tooling for the MCP ecosystem, not affiliated with Anthropic or the MCP project. Contributions and feedback are welcome.*
 
