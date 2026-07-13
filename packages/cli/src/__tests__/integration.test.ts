@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -546,5 +546,70 @@ describe("integration: verify", () => {
     expect(JSON.parse(stdout).valid).toBe(true);
     expect(stderr).toContain("deprecated");
     expect(stderr).toContain("mcpdiff verify");
+  });
+});
+
+describe("integration: init", () => {
+  const FIXTURE_SERVER = resolve(import.meta.dirname, "fixtures/fixture-server.mjs");
+  let projectDir: string;
+
+  beforeEach(() => {
+    projectDir = mkdtempSync(join(tmpdir(), "mcpc-init-"));
+  });
+
+  afterEach(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it("initializes a project non-interactively and check passes", async () => {
+    const init = await runCliIn(projectDir, "init", "--command", "node", "--args", FIXTURE_SERVER);
+    expect(init.exitCode).toBe(0);
+    expect(init.stderr).toContain("Wrote mcpcontracts.json");
+    expect(init.stderr).toContain("mcp-contract.yml");
+    expect(init.stderr).toContain("mcpdiff check");
+
+    const config = JSON.parse(
+      readFileSync(join(projectDir, "mcpcontracts.json"), "utf-8"),
+    ) as Record<string, unknown>;
+    expect(config["baseline"]).toBe("contracts/baseline.mcpc.json");
+    expect(config["failOn"]).toBe("breaking");
+    expect(existsSync(join(projectDir, "contracts", "baseline.mcpc.json"))).toBe(true);
+
+    const check = await runCliIn(projectDir, "check", "--format", "json");
+    expect(check.exitCode).toBe(0);
+    expect(check.stderr).toContain("Contract unchanged");
+  });
+
+  it("exits 2 instead of hanging when non-interactive and underspecified", async () => {
+    const { stderr, exitCode } = await runCliIn(projectDir, "init");
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain("--command");
+  });
+
+  it("refuses to overwrite without --force, then overwrites with it", async () => {
+    const first = await runCliIn(projectDir, "init", "--command", "node", "--args", FIXTURE_SERVER);
+    expect(first.exitCode).toBe(0);
+
+    const second = await runCliIn(
+      projectDir,
+      "init",
+      "--command",
+      "node",
+      "--args",
+      FIXTURE_SERVER,
+    );
+    expect(second.exitCode).toBe(2);
+    expect(second.stderr).toContain("--force");
+
+    const forced = await runCliIn(
+      projectDir,
+      "init",
+      "--force",
+      "--command",
+      "node",
+      "--args",
+      FIXTURE_SERVER,
+    );
+    expect(forced.exitCode).toBe(0);
   });
 });
