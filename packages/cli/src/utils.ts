@@ -1,6 +1,22 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import type { MCPContractSnapshot } from "@mcp-contracts/core";
+import type { MCPContractSnapshot, Severity } from "@mcp-contracts/core";
 import type { Command } from "commander";
+
+const VALID_SEVERITIES = new Set<string>(["safe", "warning", "breaking"]);
+
+/**
+ * Validates that a string is a valid Severity level.
+ *
+ * @param value - The string to validate.
+ * @param label - Label for the option (used in error messages).
+ * @returns The validated Severity value.
+ */
+export function parseSeverity(value: string, label: string): Severity {
+  if (!VALID_SEVERITIES.has(value)) {
+    throw new Error(`Invalid ${label} value "${value}". Must be one of: safe, warning, breaking`);
+  }
+  return value as Severity;
+}
 
 /**
  * Resolves the root program options from a possibly nested subcommand.
