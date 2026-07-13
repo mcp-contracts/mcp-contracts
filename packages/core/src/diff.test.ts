@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { diffSnapshots } from "./diff.js";
+import { createEmptyDiffReport, diffSnapshots } from "./diff.js";
 import type { MCPContractSnapshot } from "./types.js";
 
 function loadFixture(name: string): MCPContractSnapshot {
@@ -271,5 +271,16 @@ describe("diffSnapshots — prompt changes", () => {
     );
     expect(descChange).toHaveLength(1);
     expect(descChange[0]?.severity).toBe("warning");
+  });
+});
+
+describe("createEmptyDiffReport", () => {
+  it("builds a no-changes report without running the diff engine", () => {
+    const v1 = loadFixture("server-v1.mcpc.json");
+    const report = createEmptyDiffReport(v1, v1);
+    expect(report.changes).toHaveLength(0);
+    expect(report.summary).toEqual({ breaking: 0, warning: 0, safe: 0, total: 0 });
+    expect(report.meta.before.serverName).toBe(v1.server.name);
+    expect(report.meta.after.contentHash).toBe(v1.contentHash);
   });
 });
