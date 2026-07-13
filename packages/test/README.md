@@ -10,23 +10,28 @@ npm install @mcp-contracts/test
 
 ## CLI
 
-Test any MCP server against a contract:
+As of v0.7.0, contract testing is built into the [`mcpdiff` CLI](../cli) as `mcpdiff test` — one tool for the whole flow (*snapshot it, check it, test it, sign it*):
 
 ```bash
 # Stdio server
-mcp-test run contract.mcpc.json --command node --args server.js
+mcpdiff test contract.mcpc.json --command node --args server.js
 
 # HTTP server
-mcp-test run contract.mcpc.json --url http://localhost:3000/mcp
+mcpdiff test contract.mcpc.json --url http://localhost:3000/mcp
 
 # With options
-mcp-test run contract.mcpc.json --command node --args server.js \
+mcpdiff test contract.mcpc.json --command node --args server.js \
   --allow-extra-tools \
   --skip-tools dangerous_tool \
   --format terminal
+
+# With an mcpcontracts.json project config, zero arguments
+mcpdiff test
 ```
 
 Exit codes: `0` = all pass, `1` = failures, `2` = error.
+
+The `mcp-test run` bin this package ships is deprecated and will be removed in a future release; it takes the same arguments and prints a pointer at `mcpdiff test`. This package remains the home of the test runner and vitest matchers below.
 
 ## Library Usage
 
