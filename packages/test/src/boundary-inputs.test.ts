@@ -162,7 +162,7 @@ describe("generateBoundaryInputs", () => {
     expect(boundary.length).toBe(2);
     const belowMin = boundary.find((c) => c.description.includes("below minLength"));
     expect(belowMin).toBeDefined();
-    expect((belowMin?.input.code as string).length).toBe(2);
+    expect((belowMin?.input.code as string | undefined)?.length).toBe(2);
   });
 });
 
