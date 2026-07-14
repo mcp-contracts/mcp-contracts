@@ -24,15 +24,15 @@
   "dependencies": {
     "@mcp-contracts/core": "workspace:*",
     "@mcp-contracts/test": "workspace:^",
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "cli-table3": "^0.6.0",
-    "commander": "^14.0.3"
+    "commander": "^15.0.0"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
+    "@types/node": "^26.1.1",
     "tsup": "^8.0.0",
-    "typescript": "^5.7.0",
-    "vitest": "^4.1.0"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   },
   "keywords": [
     "mcp",
