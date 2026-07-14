@@ -28,7 +28,7 @@ const program = new Command();
 program
   .name("mcpdiff")
   .description("Capture, diff, and inspect MCP server tool schemas")
-  .version("0.7.0")
+  .version("0.7.1")
   .option("--format <format>", "Output format: terminal | json | markdown")
   .option("--no-color", "Disable colored output")
   .option("-o, --output <path>", "Output file path")
