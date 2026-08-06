@@ -33,11 +33,11 @@
   },
   "dependencies": {
     "@mcp-contracts/core": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "commander": "^15.0.0"
   },
   "devDependencies": {
-    "@types/node": "^26.1.1",
+    "@types/node": "^26.1.2",
     "tsup": "^8.0.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"
