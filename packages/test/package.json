@@ -1,6 +1,6 @@
 {
   "name": "@mcp-contracts/test",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Contract conformance testing for MCP servers",
   "type": "module",
   "exports": {

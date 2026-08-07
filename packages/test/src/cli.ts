@@ -94,7 +94,7 @@ const program = new Command();
 program
   .name("mcp-test")
   .description("Contract conformance testing for MCP servers")
-  .version("0.7.1");
+  .version("0.7.2");
 
 program
   .command("run")
