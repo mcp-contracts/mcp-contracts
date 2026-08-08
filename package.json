@@ -17,5 +17,10 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.6",
     "typescript": "^5.9.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "esbuild": "^0.28.1"
+    }
   }
 }
