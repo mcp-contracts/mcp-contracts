@@ -37,10 +37,10 @@
     "commander": "^15.0.0"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.3.0",
     "tsup": "^8.0.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "peerDependencies": {
     "vitest": ">=2.0.0"
