@@ -12,6 +12,7 @@ export {
   formatCollisionsMarkdown,
   formatCollisionsTerminal,
 } from "./collision-format.js";
+export { resolveCommandString, splitCommandString } from "./command-string.js";
 export { diffComposition } from "./composition.js";
 export {
   formatCompositionJson,

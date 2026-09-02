@@ -15,6 +15,7 @@ import {
   isProjectServerUrl,
   PROJECT_CONFIG_FILENAME,
   parseProjectConfig,
+  resolveCommandString,
 } from "@mcp-contracts/core";
 import type { ResolvedTransport } from "./commands/mcp-client.js";
 import { readMcpConfig } from "./mcp-config.js";
@@ -137,10 +138,11 @@ export function resolveProjectTransport(project: LoadedProjectConfig): ResolvedT
     throw new Error(`Project config "${project.path}" has no "server" block`);
   }
   if (isProjectServerCommand(server)) {
+    const { command, args } = resolveCommandString(server.command, server.args);
     return {
       transport: "stdio",
-      command: server.command,
-      args: server.args,
+      command,
+      args,
       env: server.env,
       cwd: project.dir,
     };

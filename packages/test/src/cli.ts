@@ -5,7 +5,7 @@
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
-import type { MCPContractSnapshot } from "@mcp-contracts/core";
+import { type MCPContractSnapshot, resolveCommandString } from "@mcp-contracts/core";
 import { Command } from "commander";
 import { formatTestJson, formatTestMarkdown, formatTestTerminal } from "./format.js";
 import { runContractTests } from "./runner.js";
@@ -100,7 +100,7 @@ program
   .command("run")
   .description("Run contract tests against a live MCP server")
   .argument("<contract>", "Path to the .mcpc.json contract file")
-  .option("--command <cmd>", "Server command for stdio transport")
+  .option("--command <cmd>", 'Server command for stdio transport (e.g. "node server.js")')
   .option("--args <args...>", "Arguments for the server command")
   .option("--url <url>", "Server URL for streamable-http transport")
   .option("--sse", "Use SSE transport instead of streamable-http")
@@ -130,10 +130,14 @@ program
         process.exit(2);
       }
 
+      const stdio = hasCommand
+        ? resolveCommandString(opts["command"] as string, opts["args"] as string[] | undefined)
+        : undefined;
+
       const serverConfig: TestServerConfig = {
         transport: hasCommand ? "stdio" : opts["sse"] ? "sse" : "streamable-http",
-        command: opts["command"] as string | undefined,
-        args: opts["args"] as string[] | undefined,
+        command: stdio?.command,
+        args: stdio?.args,
         url: opts["url"] as string | undefined,
         headers: opts["header"] ? parseHeaders(opts["header"] as string[]) : undefined,
         env: opts["env"] ? parseEnvPairs(opts["env"] as string[]) : undefined,
