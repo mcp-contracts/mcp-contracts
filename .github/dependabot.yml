@@ -10,7 +10,7 @@ updates:
         patterns:
           - "*"
     ignore:
-      # tsup's dts build does not support the TypeScript 7 (native) compiler yet
+      # hold back the TypeScript 7 (native) compiler until the toolchain supports it
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
 

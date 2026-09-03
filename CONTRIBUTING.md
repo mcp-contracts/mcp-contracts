@@ -32,11 +32,13 @@ This document records the key design decisions for the project and the reasoning
 
 ---
 
-### ADR-004: tsup for Building
+### ADR-004: tsdown for Building
 
-**Decision:** Use tsup (powered by esbuild) for building all packages.
+**Decision:** Use tsdown (powered by rolldown) for building all packages.
 
 **Why:** Zero-config for the common case (compile TS to JS, generate .d.ts files). Fast. Handles ESM output correctly. We don't need the full weight of tsc for building — we use tsc only for type checking.
+
+*Amended 2026-09:* Originally tsup (powered by esbuild). tsup is in maintenance mode and pins a vulnerable esbuild range (`^0.27.0`, GHSA-g7r4-m6w7-qqqr) with no fix upstream, which forced a pnpm override. tsdown is tsup's official successor with a near-identical config surface and no esbuild dependency.
 
 ---
 
