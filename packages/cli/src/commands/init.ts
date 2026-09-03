@@ -2,7 +2,11 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import type { MCPContractSnapshot, ProjectConfig, ProjectServer } from "@mcp-contracts/core";
-import { PROJECT_CONFIG_FILENAME, parseProjectConfig } from "@mcp-contracts/core";
+import {
+  PROJECT_CONFIG_FILENAME,
+  parseProjectConfig,
+  resolveCommandString,
+} from "@mcp-contracts/core";
 import { Command } from "commander";
 import { listConfigServers } from "../mcp-config.js";
 import { DEFAULT_BASELINE_PATH, resolveProjectTransport } from "../project-config.js";
@@ -101,8 +105,7 @@ async function promptForServer(cwd: string): Promise<ProjectServer> {
     if (/^https?:\/\//.test(input)) {
       return { url: input };
     }
-    const [command, ...args] = input.split(/\s+/);
-    return args.length > 0 ? { command: command as string, args } : { command: command as string };
+    return resolveCommandString(input);
   } finally {
     rl.close();
   }
