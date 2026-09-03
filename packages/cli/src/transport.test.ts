@@ -12,9 +12,29 @@ import {
 
 describe("resolveTransport", () => {
   it("resolves --command to stdio transport", () => {
+    const result = resolveTransport({ command: "node" });
+    expect(result.transport).toBe("stdio");
+    expect(result.command).toBe("node");
+    expect(result.args).toBeUndefined();
+  });
+
+  it("splits a --command string into executable and arguments", () => {
     const result = resolveTransport({ command: "node server.js" });
     expect(result.transport).toBe("stdio");
-    expect(result.command).toBe("node server.js");
+    expect(result.command).toBe("node");
+    expect(result.args).toEqual(["server.js"]);
+  });
+
+  it("appends --args after arguments split from --command", () => {
+    const result = resolveTransport({ command: "node server.js", args: ["--port", "3000"] });
+    expect(result.command).toBe("node");
+    expect(result.args).toEqual(["server.js", "--port", "3000"]);
+  });
+
+  it("keeps a quoted executable containing spaces intact", () => {
+    const result = resolveTransport({ command: '"/my path/node" server.js' });
+    expect(result.command).toBe("/my path/node");
+    expect(result.args).toEqual(["server.js"]);
   });
 
   it("resolves --url to streamable-http transport", () => {

@@ -114,6 +114,17 @@ describe("resolveProjectTransport", () => {
     });
   });
 
+  it("splits a command string into executable and arguments", () => {
+    const project = loaded({ server: { command: "node server.js" } });
+    expect(resolveProjectTransport(project)).toEqual({
+      transport: "stdio",
+      command: "node",
+      args: ["server.js"],
+      env: undefined,
+      cwd: project.dir,
+    });
+  });
+
   it("resolves a url server to streamable-http or sse", () => {
     const http = loaded({ server: { url: "http://localhost:3000/mcp" } });
     expect(resolveProjectTransport(http)).toEqual({

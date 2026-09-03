@@ -1,3 +1,4 @@
+import { resolveCommandString } from "@mcp-contracts/core";
 import type { Command } from "commander";
 import type { ResolvedTransport } from "./commands/mcp-client.js";
 import { readMcpConfig } from "./mcp-config.js";
@@ -80,10 +81,11 @@ export function resolveTransport(options: TransportOptions): ResolvedTransport {
     return { transport, url: options.url as string, headers };
   }
 
+  const { command, args } = resolveCommandString(options.command as string, options.args);
   return {
     transport: "stdio",
-    command: options.command as string,
-    args: options.args,
+    command,
+    args,
     env: options.env ? parseEnvPairs(options.env) : undefined,
   };
 }
@@ -141,7 +143,7 @@ export function hasTransportFlags(options: TransportOptions): boolean {
  */
 export function addTransportOptions(cmd: Command): Command {
   return cmd
-    .option("--command <cmd>", "Server command to run via stdio transport")
+    .option("--command <cmd>", 'Server command to run via stdio transport (e.g. "node server.js")')
     .option("--args <args...>", "Arguments for the server command")
     .option("--url <url>", "Server URL for streamable-http or SSE transport")
     .option("--sse", "Use SSE transport instead of streamable-http (requires --url)")
