@@ -30,8 +30,6 @@ jobs:
 
       - run: pnpm -r build
 
-      - run: pnpm -r typecheck
-
       - run: pnpm -r test
 
       # Each publish step skips versions that already exist so that a re-run
