@@ -5,6 +5,125 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2026-10-15
+
+### Security
+
+- **`@modelcontextprotocol/sdk` raised to `^1.32.1`** — clears a high-severity advisory affecting `>= 1.12.0, < 1.31.0`, where an OAuth client could send credentials to an authorization server chosen by the MCP server. The previous `^1.30.1` floor still permitted a vulnerable resolution.
+
+### Changed
+
+- `zod` 4.6.5 → 4.6.6.
+
+### Internal
+
+- Dev tooling: `biome` 2.5.15, `@types/node` 26.6.5, `tsdown` 0.23.1, `vitest` 5.0.3. `biome.json` `$schema` pin synced.
+
+## [0.8.1] - 2026-10-05
+
+### Changed
+
+- `@modelcontextprotocol/sdk` 1.30.0 → 1.30.1, `zod` 4.5.4 → 4.6.5.
+
+### Internal
+
+- **`pnpm -r typecheck` added to the CI and publish workflows.** Both previously gated on lint, build and test only, so a type regression could reach `main` and, via the publish workflow, npm.
+- Dev tooling: `vitest` 4 → 5, `biome` 2.5.14, `@types/node` 26.6.2. `biome.json` `$schema` pin synced.
+
+## [0.8.0] - 2026-09-03
+
+### Changed
+
+- **Build migrated from tsup to tsdown.**
+
+### Fixed
+
+- **Shell-split `--command` strings for the stdio transport** — commands with arguments are now parsed correctly rather than treated as a single executable name.
+
+### Internal
+
+- Examples moved out to the `example-contact-server` repository.
+- Security refreshes for transitive dependencies: `fast-uri`, `qs`, `nanoid`.
+
+## [0.7.3] - 2026-08-11
+
+### Security
+
+- Forced `esbuild` 0.28.1 via a pnpm override to clear an advisory.
+
+## [0.7.2] - 2026-08-07
+
+### Security
+
+- Updated transitive dependencies for several advisories, including `postcss`.
+
+### Internal
+
+- Publish release notes directly instead of creating drafts.
+
+## [0.7.1] - 2026-07-14
+
+### Documentation
+
+- Rewrote the root README, the `cli` package README for the 0.7 command surface, and pointed the `test` package README at `mcpdiff test`.
+
+### Internal
+
+- Held TypeScript at 5.x and adapted to biome 2.5.
+
+## [0.7.0] - 2026-07-13
+
+### Added
+
+- **`mcpdiff check` and `mcpdiff update`** — verify the live server against a committed baseline, and refresh that baseline.
+- **`mcpdiff init`** — onboarding command that scaffolds project configuration.
+- **`mcpdiff test`** — contract testing built directly into the CLI, replacing the separate `mcp-test` bin.
+- **Project configuration (`mcpcontracts.json`)** — discovery and loading, with transport and baseline resolved from the config file.
+- `mcpdiff verify` absorbs the former `verify-hash` command.
+
+### Deprecated
+
+- The `ci`, `watch` and `baseline` commands, and `diff --live`.
+- The `mcp-test` bin, which now prints a migration notice pointing at `mcpdiff test`.
+
+### Core Library
+
+- `mcpcontracts.json` schema and validation.
+- Empty diff report helper.
+
+### Fixed
+
+- Stdio servers declared in a project config are spawned from the config's directory rather than the current working directory.
+
+## [0.6.0] - 2026-07-08
+
+### Added
+
+- **Multi-server composition** — read a multi-server config, capture one snapshot per server, and diff an entire composition against its baselines in a single report.
+- **`mcpdiff check-conflicts`** — detect duplicate tool names across servers and fail on conflicting schemas.
+- **`mcpdiff graph`** — render the dependency graph of a composition.
+
+### Core Library
+
+- `composition` types, composition diff, and tool namespace collision detection.
+- Dependency graph construction.
+- Composition and collision formatters, including rename and missing-baseline hints in composition diff output.
+
+## [0.5.0] - 2026-04-08
+
+### Added
+
+- **`@mcp-contracts/test` package** — a contract testing library with an `mcp-test` CLI, covering:
+  - schema conformance testing against a snapshot
+  - boundary input testing (empty strings, zero values, missing optionals)
+  - behavioral assertions on tool output
+  - vitest/jest matchers
+  - an MCP client wrapper, test runner and output formatters
+
+### Internal
+
+- Added the `test` package to the publish workflow.
+
 ## [0.4.0] - 2026-03-28
 
 ### Added
