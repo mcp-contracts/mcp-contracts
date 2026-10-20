@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Failed discovery no longer produces an empty snapshot and a clean check.** When a server advertises a capability but the corresponding list call fails (for example a JSON-RPC `-32603` from `tools/list`, on any page), capture previously warned on stderr, wrote an empty list and exited 0. `check` against such a baseline then reported "Contract unchanged". Every command that captures a live server now fails with exit code 2 and names each list call that failed. Reported privately.
+
 ## [0.8.2] - 2026-10-15
 
 ### Security

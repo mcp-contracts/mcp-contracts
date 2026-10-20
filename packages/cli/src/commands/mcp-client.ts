@@ -77,15 +77,33 @@ export async function connectToServer(config: ResolvedTransport): Promise<Connec
   return { client, transport, protocolVersion: LATEST_PROTOCOL_VERSION };
 }
 
+/** A list call that failed for a capability the server advertises. */
+interface DiscoveryFailure {
+  label: string;
+  message: string;
+}
+
 /**
- * Warns to stderr on partial capture failures.
+ * Runs a list call for an advertised capability, recording the failure
+ * instead of letting it escape so that every failing call is reported.
  *
- * @param label - What was being listed (e.g., "tools").
- * @param err - The caught error.
+ * @param label - What is being listed (e.g., "tools").
+ * @param list - The list call to run.
+ * @param failures - Accumulator for failed calls.
+ * @returns The listed items, or an empty array when the call failed.
  */
-function warnCapture(label: string, err: unknown): void {
-  const message = err instanceof Error ? err.message : String(err);
-  process.stderr.write(`Warning: Failed to list ${label}: ${message}\n`);
+async function listOrRecord<T>(
+  label: string,
+  list: () => Promise<T[]>,
+  failures: DiscoveryFailure[],
+): Promise<T[]> {
+  try {
+    return await list();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    failures.push({ label, message });
+    return [];
+  }
 }
 
 /**
@@ -189,14 +207,18 @@ async function listAllPrompts(client: Client): Promise<RawPrompt[]> {
 /**
  * Captures all available data from a connected MCP server.
  *
- * Lists tools, resources, resource templates, and prompts based on server capabilities.
- * Each list call is wrapped in try/catch to handle partial failures gracefully.
+ * Lists tools, resources, resource templates, and prompts based on server
+ * capabilities. Discovery fails closed: if any list call for an advertised
+ * capability fails, the whole capture is rejected rather than producing a
+ * snapshot that is indistinguishable from a genuinely empty interface.
  *
  * @param client - The connected MCP client.
  * @returns All captured server data.
+ * @throws Error when any advertised capability cannot be listed.
  */
 export async function captureServerData(client: Client): Promise<CapturedData> {
   const capabilities = client.getServerCapabilities() ?? {};
+  const failures: DiscoveryFailure[] = [];
 
   let tools: RawTool[] = [];
   let resources: RawResource[] = [];
@@ -204,32 +226,25 @@ export async function captureServerData(client: Client): Promise<CapturedData> {
   let prompts: RawPrompt[] = [];
 
   if (capabilities.tools) {
-    try {
-      tools = await listAllTools(client);
-    } catch (err) {
-      warnCapture("tools", err);
-    }
+    tools = await listOrRecord("tools", () => listAllTools(client), failures);
   }
 
   if (capabilities.resources) {
-    try {
-      resources = await listAllResources(client);
-    } catch (err) {
-      warnCapture("resources", err);
-    }
-    try {
-      resourceTemplates = await listAllResourceTemplates(client);
-    } catch (err) {
-      warnCapture("resource templates", err);
-    }
+    resources = await listOrRecord("resources", () => listAllResources(client), failures);
+    resourceTemplates = await listOrRecord(
+      "resource templates",
+      () => listAllResourceTemplates(client),
+      failures,
+    );
   }
 
   if (capabilities.prompts) {
-    try {
-      prompts = await listAllPrompts(client);
-    } catch (err) {
-      warnCapture("prompts", err);
-    }
+    prompts = await listOrRecord("prompts", () => listAllPrompts(client), failures);
+  }
+
+  if (failures.length > 0) {
+    const detail = failures.map((f) => `${f.label}: ${f.message}`).join("; ");
+    throw new Error(`Discovery incomplete — failed to list ${detail}`);
   }
 
   return { tools, resources, resourceTemplates, prompts };
