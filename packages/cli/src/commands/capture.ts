@@ -1,5 +1,5 @@
 import type { MCPContractSnapshot, SnapshotCapture, SnapshotServer } from "@mcp-contracts/core";
-import { createSnapshot } from "@mcp-contracts/core";
+import { createSnapshot, sanitizeText } from "@mcp-contracts/core";
 import type { ResolvedTransport } from "./mcp-client.js";
 import { captureServerData, connectToServer } from "./mcp-client.js";
 
@@ -41,7 +41,7 @@ export async function captureSnapshot(options: CaptureOptions): Promise<CaptureR
   const version = serverVersion?.version ?? "unknown";
 
   if (!quiet && serverVersion) {
-    process.stderr.write(`Connected to ${name} v${version}\n`);
+    process.stderr.write(`Connected to ${sanitizeText(name)} v${sanitizeText(version)}\n`);
   }
 
   const data = await captureServerData(client);

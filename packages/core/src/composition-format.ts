@@ -6,6 +6,7 @@
 
 import type { CompositionDiffReport, ServerDiffEntry } from "./composition-types.js";
 import { ANSI, formatChangeMarkdown, formatChangeTerminal } from "./format.js";
+import { escapeMarkdown, sanitizeText } from "./sanitize.js";
 
 /**
  * Builds the aggregated one-line change summary (e.g., "1 breaking, 2 safe").
@@ -103,7 +104,9 @@ export function formatCompositionTerminal(report: CompositionDiffReport): string
       : hasBreaking
         ? `${ANSI.red}✗${ANSI.reset}`
         : `${ANSI.yellow}!${ANSI.reset}`;
-    lines.push(`${icon} ${ANSI.bold}${entry.serverName}${ANSI.reset} — ${serverStatusLine(entry)}`);
+    lines.push(
+      `${icon} ${ANSI.bold}${sanitizeText(entry.serverName)}${ANSI.reset} — ${serverStatusLine(entry)}`,
+    );
 
     for (const change of entry.report?.changes ?? []) {
       lines.push(formatChangeTerminal(change));
@@ -150,7 +153,7 @@ export function formatCompositionMarkdown(report: CompositionDiffReport): string
       : (entry.report?.summary.breaking ?? 0) > 0
         ? ":x:"
         : ":warning:";
-    lines.push(`### ${entry.serverName} ${marker}`);
+    lines.push(`### ${escapeMarkdown(entry.serverName)} ${marker}`);
     lines.push("");
     lines.push(serverStatusLine(entry));
     lines.push("");

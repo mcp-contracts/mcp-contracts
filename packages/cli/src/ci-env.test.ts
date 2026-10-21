@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { detectCIEnvironment } from "./ci-env.js";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { appendStepSummary, detectCIEnvironment, STEP_SUMMARY_MAX_BYTES } from "./ci-env.js";
 
 describe("detectCIEnvironment", () => {
   it("detects GitHub Actions", () => {
@@ -142,5 +145,41 @@ describe("detectCIEnvironment", () => {
 
   it("uses named export", () => {
     expect(typeof detectCIEnvironment).toBe("function");
+  });
+});
+
+describe("appendStepSummary", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "mcpc-summary-"));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+    vi.restoreAllMocks();
+  });
+
+  it("appends the markdown followed by a newline", () => {
+    const path = join(dir, "summary.md");
+    expect(appendStepSummary(path, "## one")).toBe(true);
+    expect(appendStepSummary(path, "## two")).toBe(true);
+    expect(readFileSync(path, "utf-8")).toBe("## one\n## two\n");
+  });
+
+  it("truncates oversized content below the provider limit with a note", () => {
+    const path = join(dir, "summary.md");
+    const big = "x".repeat(STEP_SUMMARY_MAX_BYTES + 5000);
+    expect(appendStepSummary(path, big)).toBe(true);
+    const written = readFileSync(path, "utf-8");
+    expect(Buffer.byteLength(written, "utf-8")).toBeLessThanOrEqual(STEP_SUMMARY_MAX_BYTES + 1);
+    expect(written).toContain("Report truncated");
+  });
+
+  it("warns and returns false instead of throwing when the write fails", () => {
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const path = join(dir, "missing-dir", "summary.md");
+    expect(appendStepSummary(path, "## report")).toBe(false);
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining("Failed to write step summary"));
   });
 });

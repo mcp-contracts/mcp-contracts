@@ -86,6 +86,15 @@ describe("normalizeTools", () => {
     expect(result.simple).not.toHaveProperty("outputSchema");
     expect(result.simple).not.toHaveProperty("annotations");
   });
+  it("keeps a tool named __proto__ as an own key", () => {
+    const result = normalizeTools([
+      { name: "__proto__", description: "d", inputSchema: { type: "object" } },
+    ]);
+    expect(Object.keys(result)).toEqual(["__proto__"]);
+    expect(JSON.stringify(result)).toBe(
+      '{"__proto__":{"description":"d","inputSchema":{"type":"object"}}}',
+    );
+  });
 });
 
 describe("normalizeResources", () => {

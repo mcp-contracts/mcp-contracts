@@ -40,6 +40,12 @@ describe("sortKeys", () => {
     const result = JSON.stringify(sortKeys(input));
     expect(result).toBe('{"c":{"b":{"a":[{"a":2,"z":1}]}}}');
   });
+  it("keeps a key literally named __proto__ in the canonical output", () => {
+    const input = JSON.parse('{"zeta":1,"__proto__":{"x":1},"alpha":2}') as Record<string, unknown>;
+    const sorted = sortKeys(input) as Record<string, unknown>;
+    expect(Object.keys(sorted)).toEqual(["__proto__", "alpha", "zeta"]);
+    expect(JSON.stringify(sorted)).toBe('{"__proto__":{"x":1},"alpha":2,"zeta":1}');
+  });
 });
 
 describe("computeContentHash", () => {
@@ -78,6 +84,14 @@ describe("computeContentHash", () => {
     const hashA = computeContentHash(toolsA, emptyResources, emptyPrompts);
     const hashB = computeContentHash(toolsB, emptyResources, emptyPrompts);
     expect(hashA).toBe(hashB);
+  });
+
+  it("includes a tool named __proto__ in the hash", () => {
+    const withProto = JSON.parse(
+      '{"__proto__":{"description":"","inputSchema":{"type":"object"}}}',
+    ) as Record<string, ToolContract>;
+    const without = {} as Record<string, ToolContract>;
+    expect(computeContentHash(withProto, {}, {})).not.toBe(computeContentHash(without, {}, {}));
   });
 
   it("produces different hashes for different data", () => {

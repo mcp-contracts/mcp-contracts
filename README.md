@@ -98,6 +98,8 @@ mcpdiff test --ignore-descriptions             # tolerate description drift
 
 Connects to an MCP server and captures its complete tool/resource/prompt interface as a `.mcpc.json` file.
 
+Discovery is bounded: at most 1000 pages and 10 000 items per list, a repeated pagination cursor is refused, and the whole capture must finish within five minutes. Exceeding a bound, or any failing list call for a capability the server advertises, is an error (exit `2`). A partial interface is never written as a snapshot.
+
 ```bash
 # Via stdio transport
 mcpdiff snapshot --command "node server.js" -o snapshot.mcpc.json
@@ -115,6 +117,8 @@ mcpdiff snapshot --config ./mcp.json --all --out-dir contracts/
 ### `mcpdiff diff`
 
 Compares two snapshots and classifies every change as breaking, warning, or safe.
+
+A change the engine has no rule for (for example a JSON Schema keyword it does not model) is reported as a `warning` named `<category>.<name>.unclassified`, so a changed contract is never reported as unchanged. Use `--fail-on warning` to gate on it. Tool `annotations` changes are reported as warnings too.
 
 ```bash
 mcpdiff diff before.mcpc.json after.mcpc.json
@@ -421,6 +425,8 @@ jobs:
 ```
 
 The `check` command auto-detects the CI environment and selects the right output format (markdown for GitHub Actions, JSON otherwise). It also writes to `GITHUB_STEP_SUMMARY` automatically.
+
+**Step summary and PR comments.** On GitHub Actions the markdown report is appended to the job's step summary. Text that comes from the server (tool names, descriptions, server name and version) is escaped before rendering, so a server cannot change how the report reads or hide findings. Reports larger than GitHub's size limit are truncated with a note; the full report is always in the job log and on stdout. A failure to write the summary is a warning and does not change the exit code.
 
 ## Packages
 

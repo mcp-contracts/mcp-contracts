@@ -1,4 +1,3 @@
-import { appendFileSync } from "node:fs";
 import type { DiffReport } from "@mcp-contracts/core";
 import {
   createEmptyDiffReport,
@@ -11,7 +10,7 @@ import {
 } from "@mcp-contracts/core";
 import { Command } from "commander";
 import { verifyBaselineSignature } from "../baseline-signature.js";
-import { detectCIEnvironment } from "../ci-env.js";
+import { appendStepSummary, detectCIEnvironment } from "../ci-env.js";
 import { loadProjectConfig, resolveTransportOrProject } from "../project-config.js";
 import { addTransportOptions } from "../transport.js";
 import {
@@ -156,7 +155,7 @@ export function createCheckCommand(): Command {
         // GitHub Actions step summary
         const ciEnv = detectCIEnvironment();
         if (ciEnv.stepSummaryPath) {
-          appendFileSync(ciEnv.stepSummaryPath, `${formatMarkdown(report)}\n`);
+          appendStepSummary(ciEnv.stepSummaryPath, formatMarkdown(report));
         }
 
         if (webhookUrl) {

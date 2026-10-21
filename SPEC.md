@@ -120,6 +120,8 @@ This ensures that two snapshots with identical tool/resource/prompt definitions 
 
 When comparing two snapshots (referred to as `before` and `after`), changes are classified into three severity levels.
 
+The classification is exhaustive by construction: if an entity present in both snapshots differs in any way that no rule below names, the engine emits a `warning` change with the id `<category>.<name>.unclassified`. A differing content hash therefore always produces at least one reported change.
+
 ### 2.1 Severity Levels
 
 | Level | Exit Code | Meaning |
@@ -135,6 +137,8 @@ When comparing two snapshots (referred to as `before` and `after`), changes are 
 | Tool removed | `breaking` | Agents relying on this tool will fail. |
 | Tool added | `safe` | New capability, no existing behavior affected. |
 | Tool description changed | `warning` | Description changes are the primary vector for tool poisoning attacks. Models use descriptions to decide when and how to call tools. A changed description could embed hidden instructions. |
+| Tool annotations changed | `warning` | Annotations such as `readOnlyHint` and `destructiveHint` steer how clients treat a tool; a flip must be reviewed. |
+| Tool changed in an unclassified way | `warning` | Any difference in the tool contract that no rule above names (for example a JSON Schema keyword the engine does not model). Emitted as `tool.<name>.unclassified` so a changed content hash is never reported as "no changes". |
 
 ### 2.3 Input Schema Changes
 
@@ -175,6 +179,7 @@ When comparing two snapshots (referred to as `before` and `after`), changes are 
 | Resource added | `safe` | New capability. |
 | Resource MIME type changed | `warning` | May affect how clients process the resource. |
 | Resource description changed | `warning` | Same poisoning concern. |
+| Resource changed in an unclassified way | `warning` | Any other difference (for example a resource becoming a template). Emitted as `resource.<uri>.unclassified`. |
 
 ### 2.6 Prompt Changes
 
@@ -186,6 +191,7 @@ When comparing two snapshots (referred to as `before` and `after`), changes are 
 | Prompt argument added (optional) | `safe` | Backward-compatible. |
 | Prompt argument removed | `warning` | Existing calls may send unused arguments. |
 | Prompt description changed | `warning` | Poisoning concern. |
+| Prompt changed in an unclassified way | `warning` | Any other difference (for example an existing argument becoming required). Emitted as `prompt.<name>.unclassified`. |
 
 ### 2.7 Description Change Detection (Security Feature)
 
@@ -200,6 +206,16 @@ Because tool description changes are the primary vector for tool poisoning, the 
 3. **Show a readable diff** of the old vs new description text, not just "changed."
 
 This is a key differentiator of the tool and directly addresses the OWASP MCP03:2025 (Tool Poisoning) threat.
+
+### 2.8 Rendering Untrusted Strings
+
+Every string that originates from a server (tool, resource and prompt names, descriptions, parameter names, server name and version, JSON-RPC error messages) is attacker-controlled and is sanitized before it reaches any human-facing output:
+
+- **Terminal:** OSC, CSI and other escape sequences and all C0/C1 control characters except newline and tab are removed, regardless of colour settings.
+- **Markdown (reports, step summaries, PR comments):** the characters that open HTML, code, links, images or table cells are backslash-escaped; line breaks inside a value collapse to spaces; inline code spans use a delimiter longer than any backtick run in the value; description diffs use a fence longer than any backtick run in the content.
+- **JSON output** is unaffected; it is structurally safe and consumers render it themselves.
+
+Names are stored and hashed verbatim. Sanitization applies only at render time.
 
 ---
 
@@ -244,7 +260,7 @@ Examples:
 **Behavior:**
 1. Connect to the MCP server using the specified transport.
 2. Complete the initialization handshake.
-3. Call `tools/list`, `resources/list`, and `prompts/list`.
+3. Call `tools/list`, `resources/list`, `resources/templates/list` and `prompts/list` for each capability the server advertises, following `nextCursor` within bounds: at most 1000 pages and 10 000 items per list, no repeated cursor, and a five-minute deadline for the whole capture.
 4. Construct the snapshot object.
 5. Compute the content hash.
 6. Write to the output file (or stdout).
@@ -252,6 +268,7 @@ Examples:
 
 **Error handling:**
 - If the server fails to start or connect within 30 seconds, exit with code 2.
+- If any list call for an advertised capability fails, or a pagination bound is exceeded, exit with code 2 and write nothing. A partial interface is never written as a snapshot.
 - If a list call fails (e.g., server doesn't support resources), omit that section with an empty object and log a warning.
 - If `--output` is not specified and stdout is a TTY, print the snapshot as formatted JSON. If piped, print compact JSON.
 

@@ -5,7 +5,14 @@
  * and calling tools — the operations needed for contract testing.
  */
 
-import type { RawPrompt, RawResource, RawResourceTemplate, RawTool } from "@mcp-contracts/core";
+import type {
+  PaginationLimits,
+  RawPrompt,
+  RawResource,
+  RawResourceTemplate,
+  RawTool,
+} from "@mcp-contracts/core";
+import { collectPages, DEFAULT_PAGINATION_LIMITS } from "@mcp-contracts/core";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import {
@@ -74,102 +81,123 @@ export async function connectToServer(config: TestServerConfig): Promise<TestCon
   };
 }
 
+/** Overall time budget for one capture, across all list calls. */
+const CAPTURE_DEADLINE_MS = 5 * 60 * 1000;
+
 /**
- * Lists all tools from the server, paginating through results.
+ * Lists all tools from the server, paginating within bounds.
  *
  * @param connection - The active server connection.
+ * @param limits - Pagination bounds. Defaults to the shared discovery limits.
  * @returns Array of raw tool data.
  */
-export async function listServerTools(connection: TestConnection): Promise<RawTool[]> {
-  const tools: RawTool[] = [];
-  let cursor: string | undefined;
-  do {
-    const result = await connection.client.listTools(cursor ? { cursor } : undefined);
-    for (const tool of result.tools) {
-      tools.push({
-        name: tool.name,
-        description: tool.description,
-        inputSchema: tool.inputSchema as RawTool["inputSchema"],
-        ...(tool.outputSchema && { outputSchema: tool.outputSchema as Record<string, unknown> }),
-        ...(tool.annotations && { annotations: tool.annotations as Record<string, unknown> }),
-      });
-    }
-    cursor = result.nextCursor;
-  } while (cursor);
-  return tools;
+export async function listServerTools(
+  connection: TestConnection,
+  limits: PaginationLimits = DEFAULT_PAGINATION_LIMITS,
+): Promise<RawTool[]> {
+  return collectPages(
+    "tools",
+    async (cursor) => {
+      const result = await connection.client.listTools(cursor ? { cursor } : undefined);
+      return {
+        items: result.tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          inputSchema: tool.inputSchema as RawTool["inputSchema"],
+          ...(tool.outputSchema && { outputSchema: tool.outputSchema as Record<string, unknown> }),
+          ...(tool.annotations && { annotations: tool.annotations as Record<string, unknown> }),
+        })),
+        nextCursor: result.nextCursor,
+      };
+    },
+    limits,
+  );
 }
 
 /**
- * Lists all resources from the server, paginating through results.
+ * Lists all resources from the server, paginating within bounds.
  *
  * @param connection - The active server connection.
+ * @param limits - Pagination bounds. Defaults to the shared discovery limits.
  * @returns Array of raw resource data.
  */
-export async function listServerResources(connection: TestConnection): Promise<RawResource[]> {
-  const resources: RawResource[] = [];
-  let cursor: string | undefined;
-  do {
-    const result = await connection.client.listResources(cursor ? { cursor } : undefined);
-    for (const resource of result.resources) {
-      resources.push({
-        uri: resource.uri,
-        name: resource.name,
-        description: resource.description,
-        mimeType: resource.mimeType,
-      });
-    }
-    cursor = result.nextCursor;
-  } while (cursor);
-  return resources;
+export async function listServerResources(
+  connection: TestConnection,
+  limits: PaginationLimits = DEFAULT_PAGINATION_LIMITS,
+): Promise<RawResource[]> {
+  return collectPages(
+    "resources",
+    async (cursor) => {
+      const result = await connection.client.listResources(cursor ? { cursor } : undefined);
+      return {
+        items: result.resources.map((resource) => ({
+          uri: resource.uri,
+          name: resource.name,
+          description: resource.description,
+          mimeType: resource.mimeType,
+        })),
+        nextCursor: result.nextCursor,
+      };
+    },
+    limits,
+  );
 }
 
 /**
- * Lists all resource templates from the server, paginating through results.
+ * Lists all resource templates from the server, paginating within bounds.
  *
  * @param connection - The active server connection.
+ * @param limits - Pagination bounds. Defaults to the shared discovery limits.
  * @returns Array of raw resource template data.
  */
 export async function listServerResourceTemplates(
   connection: TestConnection,
+  limits: PaginationLimits = DEFAULT_PAGINATION_LIMITS,
 ): Promise<RawResourceTemplate[]> {
-  const templates: RawResourceTemplate[] = [];
-  let cursor: string | undefined;
-  do {
-    const result = await connection.client.listResourceTemplates(cursor ? { cursor } : undefined);
-    for (const template of result.resourceTemplates) {
-      templates.push({
-        uriTemplate: template.uriTemplate,
-        name: template.name,
-        description: template.description,
-        mimeType: template.mimeType,
-      });
-    }
-    cursor = result.nextCursor;
-  } while (cursor);
-  return templates;
+  return collectPages(
+    "resource templates",
+    async (cursor) => {
+      const result = await connection.client.listResourceTemplates(cursor ? { cursor } : undefined);
+      return {
+        items: result.resourceTemplates.map((template) => ({
+          uriTemplate: template.uriTemplate,
+          name: template.name,
+          description: template.description,
+          mimeType: template.mimeType,
+        })),
+        nextCursor: result.nextCursor,
+      };
+    },
+    limits,
+  );
 }
 
 /**
- * Lists all prompts from the server, paginating through results.
+ * Lists all prompts from the server, paginating within bounds.
  *
  * @param connection - The active server connection.
+ * @param limits - Pagination bounds. Defaults to the shared discovery limits.
  * @returns Array of raw prompt data.
  */
-export async function listServerPrompts(connection: TestConnection): Promise<RawPrompt[]> {
-  const prompts: RawPrompt[] = [];
-  let cursor: string | undefined;
-  do {
-    const result = await connection.client.listPrompts(cursor ? { cursor } : undefined);
-    for (const prompt of result.prompts) {
-      prompts.push({
-        name: prompt.name,
-        description: prompt.description,
-        arguments: prompt.arguments,
-      });
-    }
-    cursor = result.nextCursor;
-  } while (cursor);
-  return prompts;
+export async function listServerPrompts(
+  connection: TestConnection,
+  limits: PaginationLimits = DEFAULT_PAGINATION_LIMITS,
+): Promise<RawPrompt[]> {
+  return collectPages(
+    "prompts",
+    async (cursor) => {
+      const result = await connection.client.listPrompts(cursor ? { cursor } : undefined);
+      return {
+        items: result.prompts.map((prompt) => ({
+          name: prompt.name,
+          description: prompt.description,
+          arguments: prompt.arguments,
+        })),
+        nextCursor: result.nextCursor,
+      };
+    },
+    limits,
+  );
 }
 
 /**
@@ -180,6 +208,10 @@ export async function listServerPrompts(connection: TestConnection): Promise<Raw
  */
 export async function captureServerData(connection: TestConnection): Promise<CapturedServerData> {
   const capabilities = connection.client.getServerCapabilities() ?? {};
+  const limits: PaginationLimits = {
+    ...DEFAULT_PAGINATION_LIMITS,
+    deadline: Date.now() + CAPTURE_DEADLINE_MS,
+  };
 
   let tools: RawTool[] = [];
   let resources: RawResource[] = [];
@@ -187,16 +219,16 @@ export async function captureServerData(connection: TestConnection): Promise<Cap
   let prompts: RawPrompt[] = [];
 
   if (capabilities.tools) {
-    tools = await listServerTools(connection);
+    tools = await listServerTools(connection, limits);
   }
 
   if (capabilities.resources) {
-    resources = await listServerResources(connection);
-    resourceTemplates = await listServerResourceTemplates(connection);
+    resources = await listServerResources(connection, limits);
+    resourceTemplates = await listServerResourceTemplates(connection, limits);
   }
 
   if (capabilities.prompts) {
-    prompts = await listServerPrompts(connection);
+    prompts = await listServerPrompts(connection, limits);
   }
 
   return { tools, resources, resourceTemplates, prompts };

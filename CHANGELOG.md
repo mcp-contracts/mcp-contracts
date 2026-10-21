@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **A contract change the diff engine cannot classify is no longer reported as "no changes".** Tool `annotations` are now diffed (`warning`), nested schemas are compared whenever either side has `properties` rather than only when `type` is the literal string `"object"`, and any remaining difference in a tool, resource or prompt produces a `warning` change `<category>.<name>.unclassified`. Previously such changes moved the content hash while `check` printed "No changes detected." and exited 0.
+- **Discovery pagination is bounded.** List calls stop after 1000 pages or 10 000 items per list, refuse a repeated cursor, and share a five-minute capture deadline. Exceeding a bound is a discovery failure (exit 2). Previously a server returning an endless `nextCursor` hung every live-capture command until the CI timeout.
+- **Server-controlled strings are sanitized before output.** Tool names, descriptions, server name and version, and server error messages pass through a sanitizer before reaching the terminal, markdown, step summaries or PR comments: terminal control sequences and control characters are removed regardless of `--no-color`, markdown metacharacters are escaped, inline code spans and fenced blocks are sized past any backtick run in the content. Applies to `check`, `ci`, `diff`, `inspect`, composition and collision reports, and `mcpdiff test` output.
+- **Step summary writes are guarded and capped.** A failure to write `GITHUB_STEP_SUMMARY` is a warning instead of exit 2, and content is truncated below GitHub's 1 MiB limit with an explicit note (#129).
+- **Names equal to `__proto__` are kept.** Snapshot records and the canonical hash object are now null-prototype objects, so a tool, resource, prompt or nested schema key with that name is stored, hashed, signed and diffed instead of silently disappearing.
+
 ## [0.8.3] - 2026-10-21
 
 ### Fixed

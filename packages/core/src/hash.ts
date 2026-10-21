@@ -16,7 +16,9 @@ export function sortKeys(value: unknown): unknown {
     return value.map(sortKeys);
   }
 
-  const sorted: Record<string, unknown> = {};
+  // A null-prototype object so a key literally named "__proto__" becomes an
+  // own property instead of replacing the prototype and vanishing from the hash.
+  const sorted: Record<string, unknown> = Object.create(null);
   for (const key of Object.keys(value as Record<string, unknown>).sort()) {
     sorted[key] = sortKeys((value as Record<string, unknown>)[key]);
   }
