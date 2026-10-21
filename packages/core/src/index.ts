@@ -55,6 +55,8 @@ export {
   formatGraphTerminal,
 } from "./graph-format.js";
 export { computeContentHash, sortKeys } from "./hash.js";
+export type { PageResult, PaginationLimits } from "./pagination.js";
+export { collectPages, DEFAULT_PAGINATION_LIMITS } from "./pagination.js";
 export type {
   ProjectConfig,
   ProjectServer,

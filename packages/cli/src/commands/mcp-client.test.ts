@@ -139,6 +139,25 @@ describe("captureServerData", () => {
     );
   });
 
+  it("rejects a server whose tools/list cursor never ends", async () => {
+    const listTools = vi.fn().mockResolvedValue({ tools: [alpha], nextCursor: "again" });
+    await expect(captureServerData(fakeClient({ listTools }))).rejects.toThrow(
+      "Discovery incomplete — failed to list tools: Listing tools returned a repeated cursor",
+    );
+    expect(listTools).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects a server that keeps producing fresh cursors past the page limit", async () => {
+    let n = 0;
+    const listTools = vi.fn().mockImplementation(async () => ({
+      tools: [],
+      nextCursor: `page-${n++}`,
+    }));
+    await expect(captureServerData(fakeClient({ listTools }))).rejects.toThrow(
+      "exceeded 1000 pages",
+    );
+  });
+
   it("skips capabilities the server does not advertise", async () => {
     const listTools = vi.fn();
     const client = fakeClient({ getServerCapabilities: () => ({}), listTools });

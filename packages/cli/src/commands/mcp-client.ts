@@ -1,4 +1,11 @@
-import type { RawPrompt, RawResource, RawResourceTemplate, RawTool } from "@mcp-contracts/core";
+import type {
+  PaginationLimits,
+  RawPrompt,
+  RawResource,
+  RawResourceTemplate,
+  RawTool,
+} from "@mcp-contracts/core";
+import { collectPages, DEFAULT_PAGINATION_LIMITS } from "@mcp-contracts/core";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import {
@@ -106,102 +113,116 @@ async function listOrRecord<T>(
   }
 }
 
+/** Overall time budget for one capture, across all list calls. */
+const CAPTURE_DEADLINE_MS = 5 * 60 * 1000;
+
 /**
- * Lists all tools from the server, paginating through results.
+ * Lists all tools from the server, paginating within bounds.
  *
  * @param client - The connected MCP client.
+ * @param limits - Pagination bounds.
  * @returns Array of raw tool data.
  */
-async function listAllTools(client: Client): Promise<RawTool[]> {
-  const tools: RawTool[] = [];
-  let cursor: string | undefined;
-  do {
-    const result = await client.listTools(cursor ? { cursor } : undefined);
-    for (const tool of result.tools) {
-      tools.push({
-        name: tool.name,
-        description: tool.description,
-        inputSchema: tool.inputSchema as RawTool["inputSchema"],
-        ...(tool.outputSchema && {
-          outputSchema: tool.outputSchema as Record<string, unknown>,
-        }),
-        ...(tool.annotations && { annotations: tool.annotations as Record<string, unknown> }),
-      });
-    }
-    cursor = result.nextCursor;
-  } while (cursor);
-  return tools;
+async function listAllTools(client: Client, limits: PaginationLimits): Promise<RawTool[]> {
+  return collectPages(
+    "tools",
+    async (cursor) => {
+      const result = await client.listTools(cursor ? { cursor } : undefined);
+      return {
+        items: result.tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          inputSchema: tool.inputSchema as RawTool["inputSchema"],
+          ...(tool.outputSchema && {
+            outputSchema: tool.outputSchema as Record<string, unknown>,
+          }),
+          ...(tool.annotations && { annotations: tool.annotations as Record<string, unknown> }),
+        })),
+        nextCursor: result.nextCursor,
+      };
+    },
+    limits,
+  );
 }
 
 /**
- * Lists all resources from the server, paginating through results.
+ * Lists all resources from the server, paginating within bounds.
  *
  * @param client - The connected MCP client.
+ * @param limits - Pagination bounds.
  * @returns Array of raw resource data.
  */
-async function listAllResources(client: Client): Promise<RawResource[]> {
-  const resources: RawResource[] = [];
-  let cursor: string | undefined;
-  do {
-    const result = await client.listResources(cursor ? { cursor } : undefined);
-    for (const resource of result.resources) {
-      resources.push({
-        uri: resource.uri,
-        name: resource.name,
-        description: resource.description,
-        mimeType: resource.mimeType,
-      });
-    }
-    cursor = result.nextCursor;
-  } while (cursor);
-  return resources;
+async function listAllResources(client: Client, limits: PaginationLimits): Promise<RawResource[]> {
+  return collectPages(
+    "resources",
+    async (cursor) => {
+      const result = await client.listResources(cursor ? { cursor } : undefined);
+      return {
+        items: result.resources.map((resource) => ({
+          uri: resource.uri,
+          name: resource.name,
+          description: resource.description,
+          mimeType: resource.mimeType,
+        })),
+        nextCursor: result.nextCursor,
+      };
+    },
+    limits,
+  );
 }
 
 /**
- * Lists all resource templates from the server, paginating through results.
+ * Lists all resource templates from the server, paginating within bounds.
  *
  * @param client - The connected MCP client.
+ * @param limits - Pagination bounds.
  * @returns Array of raw resource template data.
  */
-async function listAllResourceTemplates(client: Client): Promise<RawResourceTemplate[]> {
-  const templates: RawResourceTemplate[] = [];
-  let cursor: string | undefined;
-  do {
-    const result = await client.listResourceTemplates(cursor ? { cursor } : undefined);
-    for (const template of result.resourceTemplates) {
-      templates.push({
-        uriTemplate: template.uriTemplate,
-        name: template.name,
-        description: template.description,
-        mimeType: template.mimeType,
-      });
-    }
-    cursor = result.nextCursor;
-  } while (cursor);
-  return templates;
+async function listAllResourceTemplates(
+  client: Client,
+  limits: PaginationLimits,
+): Promise<RawResourceTemplate[]> {
+  return collectPages(
+    "resource templates",
+    async (cursor) => {
+      const result = await client.listResourceTemplates(cursor ? { cursor } : undefined);
+      return {
+        items: result.resourceTemplates.map((template) => ({
+          uriTemplate: template.uriTemplate,
+          name: template.name,
+          description: template.description,
+          mimeType: template.mimeType,
+        })),
+        nextCursor: result.nextCursor,
+      };
+    },
+    limits,
+  );
 }
 
 /**
- * Lists all prompts from the server, paginating through results.
+ * Lists all prompts from the server, paginating within bounds.
  *
  * @param client - The connected MCP client.
+ * @param limits - Pagination bounds.
  * @returns Array of raw prompt data.
  */
-async function listAllPrompts(client: Client): Promise<RawPrompt[]> {
-  const prompts: RawPrompt[] = [];
-  let cursor: string | undefined;
-  do {
-    const result = await client.listPrompts(cursor ? { cursor } : undefined);
-    for (const prompt of result.prompts) {
-      prompts.push({
-        name: prompt.name,
-        description: prompt.description,
-        arguments: prompt.arguments,
-      });
-    }
-    cursor = result.nextCursor;
-  } while (cursor);
-  return prompts;
+async function listAllPrompts(client: Client, limits: PaginationLimits): Promise<RawPrompt[]> {
+  return collectPages(
+    "prompts",
+    async (cursor) => {
+      const result = await client.listPrompts(cursor ? { cursor } : undefined);
+      return {
+        items: result.prompts.map((prompt) => ({
+          name: prompt.name,
+          description: prompt.description,
+          arguments: prompt.arguments as RawPrompt["arguments"],
+        })),
+        nextCursor: result.nextCursor,
+      };
+    },
+    limits,
+  );
 }
 
 /**
@@ -219,6 +240,10 @@ async function listAllPrompts(client: Client): Promise<RawPrompt[]> {
 export async function captureServerData(client: Client): Promise<CapturedData> {
   const capabilities = client.getServerCapabilities() ?? {};
   const failures: DiscoveryFailure[] = [];
+  const limits: PaginationLimits = {
+    ...DEFAULT_PAGINATION_LIMITS,
+    deadline: Date.now() + CAPTURE_DEADLINE_MS,
+  };
 
   let tools: RawTool[] = [];
   let resources: RawResource[] = [];
@@ -226,20 +251,20 @@ export async function captureServerData(client: Client): Promise<CapturedData> {
   let prompts: RawPrompt[] = [];
 
   if (capabilities.tools) {
-    tools = await listOrRecord("tools", () => listAllTools(client), failures);
+    tools = await listOrRecord("tools", () => listAllTools(client, limits), failures);
   }
 
   if (capabilities.resources) {
-    resources = await listOrRecord("resources", () => listAllResources(client), failures);
+    resources = await listOrRecord("resources", () => listAllResources(client, limits), failures);
     resourceTemplates = await listOrRecord(
       "resource templates",
-      () => listAllResourceTemplates(client),
+      () => listAllResourceTemplates(client, limits),
       failures,
     );
   }
 
   if (capabilities.prompts) {
-    prompts = await listOrRecord("prompts", () => listAllPrompts(client), failures);
+    prompts = await listOrRecord("prompts", () => listAllPrompts(client, limits), failures);
   }
 
   if (failures.length > 0) {
