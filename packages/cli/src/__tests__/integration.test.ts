@@ -665,3 +665,86 @@ describe("integration: test command", () => {
     expect(exitCode).toBe(0);
   });
 });
+
+describe("integration: failed discovery", () => {
+  const HEALTHY_SERVER = resolve(import.meta.dirname, "fixtures/fixture-server.mjs");
+  const FAILING_SERVER = resolve(import.meta.dirname, "fixtures/failing-discovery-server.mjs");
+  let workDir: string;
+
+  beforeEach(() => {
+    workDir = mkdtempSync(join(tmpdir(), "mcpc-discovery-"));
+  });
+
+  afterEach(() => {
+    rmSync(workDir, { recursive: true, force: true });
+  });
+
+  it("snapshot exits 2 and writes nothing when tools/list fails", async () => {
+    const outPath = join(workDir, "unavailable.mcpc.json");
+    const { stderr, exitCode } = await runCliIn(
+      workDir,
+      "snapshot",
+      "--command",
+      "node",
+      "--args",
+      FAILING_SERVER,
+      "fail-first",
+      "-o",
+      outPath,
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain("Discovery incomplete");
+    expect(stderr).toContain("tools");
+    expect(existsSync(outPath)).toBe(false);
+  });
+
+  it("snapshot exits 2 when a later page of tools/list fails", async () => {
+    const outPath = join(workDir, "partial.mcpc.json");
+    const { stderr, exitCode } = await runCliIn(
+      workDir,
+      "snapshot",
+      "--command",
+      "node",
+      "--args",
+      FAILING_SERVER,
+      "fail-second",
+      "-o",
+      outPath,
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain("Discovery incomplete");
+    expect(existsSync(outPath)).toBe(false);
+  });
+
+  it("check exits 2 instead of reporting an unchanged contract", async () => {
+    const baselinePath = join(workDir, "baseline.mcpc.json");
+    const baseline = await runCliIn(
+      workDir,
+      "snapshot",
+      "--command",
+      "node",
+      "--args",
+      HEALTHY_SERVER,
+      "-o",
+      baselinePath,
+    );
+    expect(baseline.exitCode).toBe(0);
+
+    const { stderr, exitCode } = await runCliIn(
+      workDir,
+      "check",
+      "--command",
+      "node",
+      "--args",
+      FAILING_SERVER,
+      "fail-first",
+      "--baseline",
+      baselinePath,
+      "--format",
+      "json",
+    );
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain("Discovery incomplete");
+    expect(stderr).not.toContain("Contract unchanged");
+  });
+});

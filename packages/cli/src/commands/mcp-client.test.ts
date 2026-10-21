@@ -1,4 +1,6 @@
+import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { captureServerData } from "./mcp-client.js";
 
 describe("connectToServer transport creation", () => {
   let mockSSE: ReturnType<typeof vi.fn>;
@@ -81,5 +83,67 @@ describe("connectToServer transport creation", () => {
     });
 
     expect(mockHTTP).toHaveBeenCalledWith(expect.any(URL));
+  });
+});
+
+describe("captureServerData", () => {
+  const alpha = { name: "alpha", description: "A", inputSchema: { type: "object" } };
+  const beta = { name: "beta", description: "B", inputSchema: { type: "object" } };
+
+  function fakeClient(overrides: Record<string, unknown>): Client {
+    return {
+      getServerCapabilities: () => ({ tools: {} }),
+      listTools: vi.fn().mockResolvedValue({ tools: [] }),
+      listResources: vi.fn().mockResolvedValue({ resources: [] }),
+      listResourceTemplates: vi.fn().mockResolvedValue({ resourceTemplates: [] }),
+      listPrompts: vi.fn().mockResolvedValue({ prompts: [] }),
+      ...overrides,
+    } as unknown as Client;
+  }
+
+  it("captures tools across pages when discovery succeeds", async () => {
+    const listTools = vi
+      .fn()
+      .mockResolvedValueOnce({ tools: [alpha], nextCursor: "second-page" })
+      .mockResolvedValueOnce({ tools: [beta] });
+    const data = await captureServerData(fakeClient({ listTools }));
+    expect(data.tools.map((t) => t.name)).toEqual(["alpha", "beta"]);
+    expect(listTools).toHaveBeenLastCalledWith({ cursor: "second-page" });
+  });
+
+  it("rejects when tools/list fails instead of returning an empty list", async () => {
+    const listTools = vi.fn().mockRejectedValue(new Error("MCP error -32603: boom"));
+    await expect(captureServerData(fakeClient({ listTools }))).rejects.toThrow(
+      "Discovery incomplete — failed to list tools: MCP error -32603: boom",
+    );
+  });
+
+  it("rejects when a later page of tools/list fails", async () => {
+    const listTools = vi
+      .fn()
+      .mockResolvedValueOnce({ tools: [alpha], nextCursor: "second-page" })
+      .mockRejectedValueOnce(new Error("page two failed"));
+    await expect(captureServerData(fakeClient({ listTools }))).rejects.toThrow(
+      "failed to list tools: page two failed",
+    );
+  });
+
+  it("reports every failed capability in one error", async () => {
+    const client = fakeClient({
+      getServerCapabilities: () => ({ tools: {}, resources: {}, prompts: {} }),
+      listResources: vi.fn().mockRejectedValue(new Error("no resources")),
+      listPrompts: vi.fn().mockRejectedValue(new Error("no prompts")),
+    });
+    await expect(captureServerData(client)).rejects.toThrow(
+      "failed to list resources: no resources; prompts: no prompts",
+    );
+  });
+
+  it("skips capabilities the server does not advertise", async () => {
+    const listTools = vi.fn();
+    const client = fakeClient({ getServerCapabilities: () => ({}), listTools });
+    const data = await captureServerData(client);
+    expect(data).toEqual({ tools: [], resources: [], resourceTemplates: [], prompts: [] });
+    expect(listTools).not.toHaveBeenCalled();
   });
 });
