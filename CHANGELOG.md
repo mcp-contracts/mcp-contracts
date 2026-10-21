@@ -5,11 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.8.3] - 2026-10-21
 
 ### Fixed
 
 - **Failed discovery no longer produces an empty snapshot and a clean check.** When a server advertises a capability but the corresponding list call fails (for example a JSON-RPC `-32603` from `tools/list`, on any page), capture previously warned on stderr, wrote an empty list and exited 0. `check` against such a baseline then reported "Contract unchanged". Every command that captures a live server now fails with exit code 2 and names each list call that failed. Reported privately by Kill The Prompt ([@killtheprompt](https://github.com/killtheprompt)).
+
+### Changed
+
+- Security reports now go through GitHub private vulnerability reporting; `SECURITY.md` points at the advisory form instead of an email address, lists the `test` package in scope, and marks 0.8.x as the supported line.
+- `zod` 4.6.6 → 4.6.7.
+
+### Internal
+
+- Dev tooling: `vitest` 5.0.5.
 
 ## [0.8.2] - 2026-10-15
 
