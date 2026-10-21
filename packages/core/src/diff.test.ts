@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createEmptyDiffReport, diffSnapshots } from "./diff.js";
+import { createSnapshot } from "./snapshot.js";
 import type { MCPContractSnapshot } from "./types.js";
 
 function loadFixture(name: string): MCPContractSnapshot {
@@ -282,5 +283,35 @@ describe("createEmptyDiffReport", () => {
     expect(report.summary).toEqual({ breaking: 0, warning: 0, safe: 0, total: 0 });
     expect(report.meta.before.serverName).toBe(v1.server.name);
     expect(report.meta.after.contentHash).toBe(v1.contentHash);
+  });
+});
+
+describe("diffSnapshots with a tool named __proto__", () => {
+  const base = {
+    server: { name: "s", version: "1", protocolVersion: "2025-03-26", capabilities: {} },
+    resources: [],
+    resourceTemplates: [],
+    prompts: [],
+    capture: { transport: "stdio" as const, source: "node s.js", tool: "test" },
+  };
+  const before = createSnapshot({ ...base, tools: [] });
+  const after = createSnapshot({
+    ...base,
+    tools: [{ name: "__proto__", description: "d", inputSchema: { type: "object" } }],
+  });
+
+  it("changes the content hash", () => {
+    expect(after.contentHash).not.toBe(before.contentHash);
+  });
+
+  it("reports the tool as added", () => {
+    const report = diffSnapshots(before, after);
+    expect(report.changes.map((c) => c.id)).toEqual(["tool.__proto__.added"]);
+  });
+
+  it("survives a JSON round trip", () => {
+    const reparsed = JSON.parse(JSON.stringify(after)) as typeof after;
+    expect(Object.keys(reparsed.tools)).toEqual(["__proto__"]);
+    expect(diffSnapshots(before, reparsed).changes).toHaveLength(1);
   });
 });

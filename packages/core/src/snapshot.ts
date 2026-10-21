@@ -82,7 +82,8 @@ export interface CreateSnapshotParams {
  * @returns Record keyed by tool name.
  */
 export function normalizeTools(tools: RawTool[]): Record<string, ToolContract> {
-  const result: Record<string, ToolContract> = {};
+  // Null-prototype so a name of "__proto__" is stored as an own key, not dropped.
+  const result: Record<string, ToolContract> = Object.create(null);
   for (const tool of tools) {
     const contract: ToolContract = {
       description: tool.description ?? "",
@@ -112,7 +113,8 @@ export function normalizeResources(
   resources: RawResource[],
   resourceTemplates: RawResourceTemplate[],
 ): Record<string, ResourceContract> {
-  const result: Record<string, ResourceContract> = {};
+  // Null-prototype so a name of "__proto__" is stored as an own key, not dropped.
+  const result: Record<string, ResourceContract> = Object.create(null);
   for (const resource of resources) {
     result[resource.uri] = {
       description: resource.description ?? "",
@@ -137,7 +139,8 @@ export function normalizeResources(
  * @returns Record keyed by prompt name.
  */
 export function normalizePrompts(prompts: RawPrompt[]): Record<string, PromptContract> {
-  const result: Record<string, PromptContract> = {};
+  // Null-prototype so a name of "__proto__" is stored as an own key, not dropped.
+  const result: Record<string, PromptContract> = Object.create(null);
   for (const prompt of prompts) {
     const args: PromptArgument[] = (prompt.arguments ?? []).map((arg) => {
       const normalized: PromptArgument = { name: arg.name };
