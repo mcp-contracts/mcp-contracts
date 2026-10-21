@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Internal
 
-- Dev tooling: `vitest` 5.0.5.
+- Dev tooling: `vitest` 5.0.5. `vite` declared as a root dev dependency at `^8.2.4` and resolved to 8.3.5, clearing three `launch-editor` advisories in the previously auto-installed 8.2.0 peer; the published packages never depended on it.
 
 ## [0.8.2] - 2026-10-15
 
