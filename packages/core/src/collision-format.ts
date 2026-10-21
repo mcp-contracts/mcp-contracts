@@ -6,7 +6,7 @@
 
 import type { CollisionReport, ToolCollision } from "./composition-types.js";
 import { ANSI } from "./format.js";
-import { markdownCode, sanitizeText } from "./sanitize.js";
+import { escapeMarkdown, markdownCode, sanitizeText } from "./sanitize.js";
 
 /** Icons per collision kind, matching diff severity icons. */
 const KIND_ICONS: Record<ToolCollision["kind"], string> = {
@@ -63,7 +63,7 @@ export function formatCollisionsTerminal(report: CollisionReport): string {
       `${KIND_ICONS[collision.kind]} ${color}${collision.kind}${ANSI.reset}  ` +
         `${ANSI.bold}${sanitizeText(collision.toolName)}${ANSI.reset} — ${collision.servers.map(sanitizeText).join(", ")} (${schemas})`,
     );
-    lines.push(`    ${ANSI.dim}${collision.suggestion}${ANSI.reset}`);
+    lines.push(`    ${ANSI.dim}${sanitizeText(collision.suggestion)}${ANSI.reset}`);
   }
 
   lines.push("");
@@ -102,7 +102,7 @@ export function formatCollisionsMarkdown(report: CollisionReport): string {
       `- ${KIND_ICONS[collision.kind]} **${collision.kind}** — ${markdownCode(collision.toolName)} on ` +
         `${collision.servers.map(markdownCode).join(", ")} (${schemas})`,
     );
-    lines.push(`  - ${collision.suggestion}`);
+    lines.push(`  - ${escapeMarkdown(collision.suggestion)}`);
   }
 
   return lines.join("\n");

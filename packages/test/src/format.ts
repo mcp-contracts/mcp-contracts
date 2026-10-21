@@ -2,7 +2,7 @@
  * Test result formatters for terminal, JSON, and markdown output.
  */
 
-import { escapeMarkdown, sanitizeText } from "@mcp-contracts/core";
+import { escapeMarkdown, markdownCode, sanitizeText } from "@mcp-contracts/core";
 import type { TestReport, TestResult, TestStatus } from "./types.js";
 
 /** ANSI color codes for terminal output. */
@@ -79,7 +79,9 @@ export function formatTestTerminal(report: TestReport): string {
 
   // Header
   lines.push(`${ANSI.bold}MCP Contract Test Report${ANSI.reset}`);
-  lines.push(`${ANSI.dim}${report.meta.serverName}@${report.meta.serverVersion}${ANSI.reset}`);
+  lines.push(
+    `${ANSI.dim}${sanitizeText(report.meta.serverName)}@${sanitizeText(report.meta.serverVersion)}${ANSI.reset}`,
+  );
   lines.push("");
 
   // Summary line
@@ -140,7 +142,9 @@ export function formatTestMarkdown(report: TestReport): string {
   // Header
   lines.push("## MCP Contract Test Report");
   lines.push("");
-  lines.push(`**${report.meta.serverName}** \`${report.meta.serverVersion}\``);
+  lines.push(
+    `**${escapeMarkdown(report.meta.serverName)}** ${markdownCode(report.meta.serverVersion)}`,
+  );
   lines.push("");
 
   // Summary
