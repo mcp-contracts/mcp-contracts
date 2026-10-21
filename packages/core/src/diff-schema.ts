@@ -392,8 +392,10 @@ function diffPropertyModifications(
   changes.push(...diffPropertyMetadata(toolName, propPath, prop, beforeProp, afterProp));
   changes.push(...diffPropertyConstraints(toolName, propPath, prop, beforeProp, afterProp));
 
-  // Recurse into nested object schemas
-  if (beforeProp.type === "object" && afterProp.type === "object") {
+  // Recurse into nested object schemas. Keyed on the presence of `properties`
+  // rather than the literal type string, so `type: ["object"]` or a schema
+  // with properties but no `type` is still compared.
+  if (beforeProp.properties !== undefined || afterProp.properties !== undefined) {
     changes.push(...diffSchemas(toolName, beforeProp, afterProp, schemaKind, propPath));
   }
 

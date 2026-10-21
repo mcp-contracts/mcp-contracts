@@ -1,7 +1,8 @@
 import { diffOutputSchema, diffSchemas } from "./diff-schema.js";
 import type { DiffOptions, DiffReport, DiffSummary, SchemaChange, Severity } from "./diff-types.js";
 import { SEVERITY_ORDER } from "./diff-types.js";
-import type { MCPContractSnapshot } from "./types.js";
+import { sortKeys } from "./hash.js";
+import type { MCPContractSnapshot, ResourceContract } from "./types.js";
 
 /**
  * Builds the metadata section of a diff report from two snapshots.
@@ -67,6 +68,41 @@ function filterBySeverity(changes: SchemaChange[], minSeverity: Severity): Schem
 }
 
 /**
+ * Canonical JSON for structural comparison, independent of key order.
+ *
+ * @param value - Any JSON-compatible value.
+ * @returns Stable string form.
+ */
+function canonical(value: unknown): string {
+  return JSON.stringify(sortKeys(value));
+}
+
+/**
+ * Builds the warning emitted when an entity differs but no rule classified it.
+ *
+ * The diff engine compares a fixed set of fields and keywords. Anything
+ * outside that set would otherwise change the content hash while the report
+ * said "no changes", which is the one outcome a contract tool must never
+ * produce. The warning makes the drift visible and lets `--fail-on warning`
+ * gate on it.
+ *
+ * @param category - The entity category.
+ * @param name - The entity name or URI.
+ * @returns A warning-level modified change.
+ */
+function unclassifiedChange(category: SchemaChange["category"], name: string): SchemaChange {
+  const label = category.charAt(0).toUpperCase() + category.slice(1);
+  return {
+    id: `${category}.${name}.unclassified`,
+    category,
+    name,
+    severity: "warning",
+    type: "modified",
+    message: `${label} "${name}" changed in a way the diff engine does not classify`,
+  };
+}
+
+/**
  * Detects tool-level changes between two snapshots.
  *
  * @param before - The baseline snapshot.
@@ -112,6 +148,7 @@ function diffTools(before: MCPContractSnapshot, after: MCPContractSnapshot): Sch
     const beforeTool = before.tools[name];
     const afterTool = after.tools[name];
     if (!beforeTool || !afterTool) continue;
+    const countBefore = changes.length;
 
     if (beforeTool.description !== afterTool.description) {
       changes.push({
@@ -134,6 +171,25 @@ function diffTools(before: MCPContractSnapshot, after: MCPContractSnapshot): Sch
 
     // Output schema changes
     changes.push(...diffOutputSchema(name, beforeTool.outputSchema, afterTool.outputSchema));
+
+    // Annotations (readOnlyHint, destructiveHint, ...) are part of the contract
+    if (canonical(beforeTool.annotations) !== canonical(afterTool.annotations)) {
+      changes.push({
+        id: `tool.${name}.annotations`,
+        category: "tool",
+        name,
+        severity: "warning",
+        type: "modified",
+        message: `Tool "${name}" annotations changed`,
+        path: "annotations",
+        before: beforeTool.annotations,
+        after: afterTool.annotations,
+      });
+    }
+
+    if (changes.length === countBefore && canonical(beforeTool) !== canonical(afterTool)) {
+      changes.push(unclassifiedChange("tool", name));
+    }
   }
 
   return changes;
@@ -182,34 +238,57 @@ function diffResources(before: MCPContractSnapshot, after: MCPContractSnapshot):
     const beforeRes = before.resources[uri];
     const afterRes = after.resources[uri];
     if (!beforeRes || !afterRes) continue;
+    changes.push(...diffResourceModifications(uri, beforeRes, afterRes));
+  }
 
-    if (beforeRes.description !== afterRes.description) {
-      changes.push({
-        id: `resource.${uri}.description`,
-        category: "resource",
-        name: uri,
-        severity: "warning",
-        type: "modified",
-        message: `Resource "${uri}" description changed`,
-        path: "description",
-        before: beforeRes.description,
-        after: afterRes.description,
-      });
-    }
+  return changes;
+}
 
-    if (beforeRes.mimeType !== afterRes.mimeType) {
-      changes.push({
-        id: `resource.${uri}.mimeType`,
-        category: "resource",
-        name: uri,
-        severity: "warning",
-        type: "modified",
-        message: `Resource "${uri}" MIME type changed from "${beforeRes.mimeType ?? "unset"}" to "${afterRes.mimeType ?? "unset"}"`,
-        path: "mimeType",
-        before: beforeRes.mimeType,
-        after: afterRes.mimeType,
-      });
-    }
+/**
+ * Detects modifications to a single resource present in both snapshots.
+ *
+ * @param uri - The resource URI.
+ * @param beforeRes - The old resource contract.
+ * @param afterRes - The new resource contract.
+ * @returns List of changes for this resource.
+ */
+function diffResourceModifications(
+  uri: string,
+  beforeRes: ResourceContract,
+  afterRes: ResourceContract,
+): SchemaChange[] {
+  const changes: SchemaChange[] = [];
+
+  if (beforeRes.description !== afterRes.description) {
+    changes.push({
+      id: `resource.${uri}.description`,
+      category: "resource",
+      name: uri,
+      severity: "warning",
+      type: "modified",
+      message: `Resource "${uri}" description changed`,
+      path: "description",
+      before: beforeRes.description,
+      after: afterRes.description,
+    });
+  }
+
+  if (beforeRes.mimeType !== afterRes.mimeType) {
+    changes.push({
+      id: `resource.${uri}.mimeType`,
+      category: "resource",
+      name: uri,
+      severity: "warning",
+      type: "modified",
+      message: `Resource "${uri}" MIME type changed from "${beforeRes.mimeType ?? "unset"}" to "${afterRes.mimeType ?? "unset"}"`,
+      path: "mimeType",
+      before: beforeRes.mimeType,
+      after: afterRes.mimeType,
+    });
+  }
+
+  if (changes.length === 0 && canonical(beforeRes) !== canonical(afterRes)) {
+    changes.push(unclassifiedChange("resource", uri));
   }
 
   return changes;
@@ -330,7 +409,11 @@ function diffPrompts(before: MCPContractSnapshot, after: MCPContractSnapshot): S
     const beforePrompt = before.prompts[name];
     const afterPrompt = after.prompts[name];
     if (!beforePrompt || !afterPrompt) continue;
-    changes.push(...diffPromptModifications(name, beforePrompt, afterPrompt));
+    const modifications = diffPromptModifications(name, beforePrompt, afterPrompt);
+    changes.push(...modifications);
+    if (modifications.length === 0 && canonical(beforePrompt) !== canonical(afterPrompt)) {
+      changes.push(unclassifiedChange("prompt", name));
+    }
   }
 
   return changes;

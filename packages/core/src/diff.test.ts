@@ -315,3 +315,108 @@ describe("diffSnapshots with a tool named __proto__", () => {
     expect(diffSnapshots(before, reparsed).changes).toHaveLength(1);
   });
 });
+
+describe("diffSnapshots blind-spot coverage", () => {
+  const base = {
+    server: { name: "s", version: "1", protocolVersion: "2025-03-26", capabilities: {} },
+    resources: [],
+    resourceTemplates: [],
+    prompts: [],
+    capture: { transport: "stdio" as const, source: "node s.js", tool: "test" },
+  };
+  type Tool = { name: string; description?: string; inputSchema: Record<string, unknown> } & Record<
+    string,
+    unknown
+  >;
+  const snap = (tools: Tool[], extra: Partial<typeof base> = {}) =>
+    createSnapshot({ ...base, ...extra, tools: tools as never });
+
+  it("reports an annotations change as a warning", () => {
+    const before = snap([{ name: "t", inputSchema: {}, annotations: { readOnlyHint: true } }]);
+    const after = snap([{ name: "t", inputSchema: {}, annotations: { destructiveHint: true } }]);
+    const ids = diffSnapshots(before, after).changes.map((c) => c.id);
+    expect(ids).toEqual(["tool.t.annotations"]);
+    expect(diffSnapshots(before, after).changes[0]?.severity).toBe("warning");
+  });
+
+  it("recurses into nested schemas whose type is an array or absent", () => {
+    const before = snap([
+      {
+        name: "t",
+        inputSchema: {
+          type: "object",
+          properties: { opts: { type: ["object"], properties: { a: { type: "string" } } } },
+        },
+      },
+    ]);
+    const after = snap([
+      {
+        name: "t",
+        inputSchema: {
+          type: "object",
+          properties: {
+            opts: {
+              type: ["object"],
+              properties: { a: { type: "string" }, b: { type: "string" } },
+              required: ["b"],
+            },
+          },
+        },
+      },
+    ]);
+    const changes = diffSnapshots(before, after).changes;
+    expect(changes.some((c) => c.path === "inputSchema.properties.opts.properties.b")).toBe(true);
+    expect(changes.some((c) => c.severity === "breaking")).toBe(true);
+  });
+
+  it("emits an unclassified warning for a keyword the engine does not handle", () => {
+    const before = snap([
+      { name: "t", inputSchema: { type: "object", properties: { p: { type: "string" } } } },
+    ]);
+    const after = snap([
+      {
+        name: "t",
+        inputSchema: { type: "object", properties: { p: { type: "string", pattern: "^x" } } },
+      },
+    ]);
+    expect(before.contentHash).not.toBe(after.contentHash);
+    const changes = diffSnapshots(before, after).changes;
+    expect(changes.map((c) => c.id)).toEqual(["tool.t.unclassified"]);
+    expect(changes[0]?.severity).toBe("warning");
+  });
+
+  it("does not emit the unclassified warning when a change was classified", () => {
+    const before = snap([{ name: "t", description: "a", inputSchema: {} }]);
+    const after = snap([{ name: "t", description: "b", inputSchema: {} }]);
+    expect(diffSnapshots(before, after).changes.map((c) => c.id)).toEqual(["tool.t.description"]);
+  });
+
+  it("emits nothing when the tool is identical", () => {
+    const before = snap([{ name: "t", inputSchema: { type: "object" } }]);
+    const after = snap([{ name: "t", inputSchema: { type: "object" } }]);
+    expect(diffSnapshots(before, after).changes).toEqual([]);
+  });
+
+  it("flags a prompt argument flipping to required", () => {
+    const before = snap([], {
+      prompts: [{ name: "p", arguments: [{ name: "a", required: false }] }] as never,
+    });
+    const after = snap([], {
+      prompts: [{ name: "p", arguments: [{ name: "a", required: true }] }] as never,
+    });
+    expect(diffSnapshots(before, after).changes.map((c) => c.id)).toEqual([
+      "prompt.p.unclassified",
+    ]);
+  });
+
+  it("flags a resource turning into a template", () => {
+    const before = snap([], { resources: [{ uri: "x://y", name: "y" }] as never });
+    const after = snap([], {
+      resources: [],
+      resourceTemplates: [{ uriTemplate: "x://y", name: "y" }] as never,
+    });
+    expect(diffSnapshots(before, after).changes.map((c) => c.id)).toEqual([
+      "resource.x://y.unclassified",
+    ]);
+  });
+});

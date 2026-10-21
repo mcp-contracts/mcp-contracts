@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **A contract change the diff engine cannot classify is no longer reported as "no changes".** Tool `annotations` are now diffed (`warning`), nested schemas are compared whenever either side has `properties` rather than only when `type` is the literal string `"object"`, and any remaining difference in a tool, resource or prompt produces a `warning` change `<category>.<name>.unclassified`. Previously such changes moved the content hash while `check` printed "No changes detected." and exited 0.
+- **Discovery pagination is bounded.** List calls stop after 1000 pages or 10 000 items per list, refuse a repeated cursor, and share a five-minute capture deadline. Exceeding a bound is a discovery failure (exit 2). Previously a server returning an endless `nextCursor` hung every live-capture command until the CI timeout.
+- **Names equal to `__proto__` are kept.** Snapshot records and the canonical hash object are now null-prototype objects, so a tool, resource, prompt or nested schema key with that name is stored, hashed, signed and diffed instead of silently disappearing.
+
 ## [0.8.3] - 2026-10-21
 
 ### Fixed

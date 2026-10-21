@@ -135,6 +135,8 @@ When comparing two snapshots (referred to as `before` and `after`), changes are 
 | Tool removed | `breaking` | Agents relying on this tool will fail. |
 | Tool added | `safe` | New capability, no existing behavior affected. |
 | Tool description changed | `warning` | Description changes are the primary vector for tool poisoning attacks. Models use descriptions to decide when and how to call tools. A changed description could embed hidden instructions. |
+| Tool annotations changed | `warning` | Annotations such as `readOnlyHint` and `destructiveHint` steer how clients treat a tool; a flip must be reviewed. |
+| Tool changed in an unclassified way | `warning` | Any difference in the tool contract that no rule above names (for example a JSON Schema keyword the engine does not model). Emitted as `tool.<name>.unclassified` so a changed content hash is never reported as "no changes". |
 
 ### 2.3 Input Schema Changes
 
@@ -175,6 +177,7 @@ When comparing two snapshots (referred to as `before` and `after`), changes are 
 | Resource added | `safe` | New capability. |
 | Resource MIME type changed | `warning` | May affect how clients process the resource. |
 | Resource description changed | `warning` | Same poisoning concern. |
+| Resource changed in an unclassified way | `warning` | Any other difference (for example a resource becoming a template). Emitted as `resource.<uri>.unclassified`. |
 
 ### 2.6 Prompt Changes
 
@@ -186,6 +189,7 @@ When comparing two snapshots (referred to as `before` and `after`), changes are 
 | Prompt argument added (optional) | `safe` | Backward-compatible. |
 | Prompt argument removed | `warning` | Existing calls may send unused arguments. |
 | Prompt description changed | `warning` | Poisoning concern. |
+| Prompt changed in an unclassified way | `warning` | Any other difference (for example an existing argument becoming required). Emitted as `prompt.<name>.unclassified`. |
 
 ### 2.7 Description Change Detection (Security Feature)
 
