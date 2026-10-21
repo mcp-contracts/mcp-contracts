@@ -1,4 +1,5 @@
 import type { MCPContractSnapshot } from "@mcp-contracts/core";
+import { escapeMarkdown, sanitizeText } from "@mcp-contracts/core";
 import Table from "cli-table3";
 import { Command } from "commander";
 import type { OutputFormat } from "../utils.js";
@@ -91,14 +92,14 @@ function formatTools(snapshot: MCPContractSnapshot, format: OutputFormat): strin
   if (format === "markdown") {
     const lines = ["| Name | Description |", "| --- | --- |"];
     for (const [name, tool] of tools) {
-      lines.push(`| ${name} | ${tool.description} |`);
+      lines.push(`| ${escapeMarkdown(name)} | ${escapeMarkdown(tool.description)} |`);
     }
     return lines.join("\n");
   }
 
   const table = new Table({ head: ["Name", "Description"] });
   for (const [name, tool] of tools) {
-    table.push([name, tool.description]);
+    table.push([sanitizeText(name), sanitizeText(tool.description)]);
   }
   return table.toString();
 }
@@ -130,7 +131,7 @@ function formatResources(snapshot: MCPContractSnapshot, format: OutputFormat): s
     const lines = ["| URI | Description | MIME Type | Template |", "| --- | --- | --- | --- |"];
     for (const [uri, res] of resources) {
       lines.push(
-        `| ${uri} | ${res.description} | ${res.mimeType ?? ""} | ${res.isTemplate ? "Yes" : "No"} |`,
+        `| ${escapeMarkdown(uri)} | ${escapeMarkdown(res.description)} | ${escapeMarkdown(res.mimeType ?? "")} | ${res.isTemplate ? "Yes" : "No"} |`,
       );
     }
     return lines.join("\n");
@@ -138,7 +139,12 @@ function formatResources(snapshot: MCPContractSnapshot, format: OutputFormat): s
 
   const table = new Table({ head: ["URI", "Description", "MIME Type", "Template"] });
   for (const [uri, res] of resources) {
-    table.push([uri, res.description, res.mimeType ?? "", res.isTemplate ? "Yes" : "No"]);
+    table.push([
+      sanitizeText(uri),
+      sanitizeText(res.description),
+      sanitizeText(res.mimeType ?? ""),
+      res.isTemplate ? "Yes" : "No",
+    ]);
   }
   return table.toString();
 }
@@ -169,7 +175,9 @@ function formatPrompts(snapshot: MCPContractSnapshot, format: OutputFormat): str
     const lines = ["| Name | Description | Arguments |", "| --- | --- | --- |"];
     for (const [name, prompt] of prompts) {
       const args = prompt.arguments.map((a) => a.name).join(", ");
-      lines.push(`| ${name} | ${prompt.description} | ${args} |`);
+      lines.push(
+        `| ${escapeMarkdown(name)} | ${escapeMarkdown(prompt.description)} | ${escapeMarkdown(args)} |`,
+      );
     }
     return lines.join("\n");
   }
@@ -177,7 +185,7 @@ function formatPrompts(snapshot: MCPContractSnapshot, format: OutputFormat): str
   const table = new Table({ head: ["Name", "Description", "Arguments"] });
   for (const [name, prompt] of prompts) {
     const args = prompt.arguments.map((a) => a.name).join(", ");
-    table.push([name, prompt.description, args]);
+    table.push([sanitizeText(name), sanitizeText(prompt.description), sanitizeText(args)]);
   }
   return table.toString();
 }

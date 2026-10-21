@@ -73,6 +73,7 @@ export {
   parseProjectConfig,
   projectConfigSchema,
 } from "./project-config.js";
+export { escapeMarkdown, markdownCode, markdownFence, sanitizeText } from "./sanitize.js";
 export {
   detectKeyAlgorithm,
   parseSignatureFile,

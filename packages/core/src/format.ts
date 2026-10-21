@@ -1,4 +1,5 @@
 import type { DiffReport, SchemaChange, Severity } from "./diff-types.js";
+import { escapeMarkdown, markdownCode, markdownFence, sanitizeText } from "./sanitize.js";
 
 /** ANSI color codes for terminal output. Internal to core formatters. */
 export const ANSI = {
@@ -57,14 +58,14 @@ export function formatChangeTerminal(change: SchemaChange): string {
   const icon = SEVERITY_ICONS[change.severity];
   const color = SEVERITY_COLORS[change.severity];
   const severity = `${color}${change.severity}${ANSI.reset}`;
-  const lines = [`  ${icon} ${severity}  ${ANSI.bold}${change.message}${ANSI.reset}`];
+  const lines = [`  ${icon} ${severity}  ${ANSI.bold}${sanitizeText(change.message)}${ANSI.reset}`];
 
   if (change.path) {
-    lines.push(`    ${ANSI.dim}path: ${change.path}${ANSI.reset}`);
+    lines.push(`    ${ANSI.dim}path: ${sanitizeText(change.path)}${ANSI.reset}`);
   }
 
   if (typeof change.before === "string" && typeof change.after === "string") {
-    const diff = inlineDiff(change.before, change.after);
+    const diff = inlineDiff(sanitizeText(change.before), sanitizeText(change.after));
     for (const line of diff.split("\n")) {
       const lineColor = line.startsWith("-") ? ANSI.red : ANSI.green;
       lines.push(`    ${lineColor}${line}${ANSI.reset}`);
@@ -85,8 +86,9 @@ export function formatTerminal(report: DiffReport): string {
 
   // Header
   lines.push(`${ANSI.bold}MCP Contract Diff${ANSI.reset}`);
+  const { before, after } = report.meta;
   lines.push(
-    `${ANSI.dim}${report.meta.before.serverName}@${report.meta.before.serverVersion} → ${report.meta.after.serverName}@${report.meta.after.serverVersion}${ANSI.reset}`,
+    `${ANSI.dim}${sanitizeText(before.serverName)}@${sanitizeText(before.serverVersion)} → ${sanitizeText(after.serverName)}@${sanitizeText(after.serverVersion)}${ANSI.reset}`,
   );
   lines.push("");
 
@@ -135,13 +137,20 @@ export function formatTerminal(report: DiffReport): string {
  */
 export function formatChangeMarkdown(change: SchemaChange): string {
   const icon = SEVERITY_ICONS[change.severity];
-  const lines = [`- ${icon} **${change.severity}** — ${change.message}`];
+  const lines = [`- ${icon} **${change.severity}** — ${escapeMarkdown(change.message)}`];
 
   if (typeof change.before === "string" && typeof change.after === "string") {
-    lines.push("  ```diff");
-    lines.push(`  - ${change.before}`);
-    lines.push(`  + ${change.after}`);
-    lines.push("  ```");
+    // Inside a fence markdown is not parsed, so the only ways out are a
+    // closing fence (defeated by sizing ours past any run in the content)
+    // and control sequences (removed). Continuation lines stay indented so
+    // they cannot end the list item.
+    const before = sanitizeText(change.before).replace(/\n/g, "\n    ");
+    const after = sanitizeText(change.after).replace(/\n/g, "\n    ");
+    const fence = markdownFence(`${before}\n${after}`);
+    lines.push(`  ${fence}diff`);
+    lines.push(`  - ${before}`);
+    lines.push(`  + ${after}`);
+    lines.push(`  ${fence}`);
   }
 
   return lines.join("\n");
@@ -159,8 +168,9 @@ export function formatMarkdown(report: DiffReport): string {
   // Header
   lines.push("## MCP Contract Diff");
   lines.push("");
+  const { before, after } = report.meta;
   lines.push(
-    `**${report.meta.before.serverName}** \`${report.meta.before.serverVersion}\` → \`${report.meta.after.serverVersion}\``,
+    `**${escapeMarkdown(before.serverName)}** ${markdownCode(before.serverVersion)} → ${markdownCode(after.serverVersion)}`,
   );
   lines.push("");
 

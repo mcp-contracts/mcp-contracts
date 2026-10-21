@@ -2,7 +2,14 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { diffSnapshots } from "./diff.js";
-import { formatJson, formatMarkdown, formatTerminal } from "./format.js";
+import type { SchemaChange } from "./diff-types.js";
+import {
+  formatChangeMarkdown,
+  formatChangeTerminal,
+  formatJson,
+  formatMarkdown,
+  formatTerminal,
+} from "./format.js";
 import type { MCPContractSnapshot } from "./types.js";
 
 function loadFixture(name: string): MCPContractSnapshot {
@@ -150,5 +157,58 @@ describe("formatMarkdown", () => {
     const output = formatMarkdown(report);
     expect(output).toContain("### Tools");
     expect(output).toContain("### Resources");
+  });
+});
+
+describe("formatters neutralize server-controlled strings", () => {
+  const hostile: SchemaChange = {
+    id: "tool.x.description",
+    category: "tool",
+    name: "x",
+    severity: "warning",
+    type: "modified",
+    message: 'Tool "<details><summary>x</summary>" description changed\u001b[2J',
+    path: "description",
+    before: "old",
+    after: "new\n```\n\n## MCP Contract Diff\n\nNo changes detected. :white_check_mark:",
+  };
+
+  it("escapes HTML and markdown in the markdown message", () => {
+    const md = formatChangeMarkdown(hostile);
+    expect(md).not.toContain("<details>");
+    expect(md).toContain("\\<details\\>");
+    expect(md).not.toContain("\u001b");
+  });
+
+  it("sizes the diff fence past any backtick run in the content", () => {
+    const md = formatChangeMarkdown(hostile);
+    const lines = md.split("\n");
+    expect(lines[1]).toBe("  ````diff");
+    expect(lines[lines.length - 1]).toBe("  ````");
+    // the injected heading stays inside the fence and indented
+    expect(md).toContain("    ## MCP Contract Diff");
+  });
+
+  it("strips terminal control sequences from terminal output", () => {
+    const term = formatChangeTerminal(hostile);
+    expect(term).not.toContain("\u001b[2J");
+    expect(term).toContain('Tool "<details><summary>x</summary>" description changed');
+  });
+
+  it("escapes server name and version in the markdown header", () => {
+    const report = diffSnapshots(v1, v1);
+    report.meta.before.serverName = "**bold**<img src=x>";
+    report.meta.before.serverVersion = "1.0` [ok](https://evil)";
+    const md = formatMarkdown(report);
+    expect(md).toContain("\\<img src=x\\>");
+    expect(md).not.toMatch(/[^\\]<img/);
+    expect(md).toContain("``1.0` [ok](https://evil)``");
+  });
+
+  it("strips control sequences from the terminal header", () => {
+    const report = diffSnapshots(v1, v1);
+    report.meta.after.serverVersion = "2.0\u001b]0;pwned\u0007";
+    expect(formatTerminal(report)).toContain("@2.0");
+    expect(formatTerminal(report)).not.toContain("pwned");
   });
 });

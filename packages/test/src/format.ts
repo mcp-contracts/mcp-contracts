@@ -2,6 +2,7 @@
  * Test result formatters for terminal, JSON, and markdown output.
  */
 
+import { escapeMarkdown, sanitizeText } from "@mcp-contracts/core";
 import type { TestReport, TestResult, TestStatus } from "./types.js";
 
 /** ANSI color codes for terminal output. */
@@ -39,14 +40,14 @@ const STATUS_LABELS: Record<TestStatus, string> = {
  */
 function formatResultTerminal(result: TestResult): string {
   const label = STATUS_LABELS[result.status];
-  const lines = [`  ${label}  ${result.description}`];
+  const lines = [`  ${label}  ${sanitizeText(result.description)}`];
 
   if (result.message) {
-    lines.push(`        ${ANSI.dim}${result.message}${ANSI.reset}`);
+    lines.push(`        ${ANSI.dim}${sanitizeText(result.message)}${ANSI.reset}`);
   }
 
   if (result.path) {
-    lines.push(`        ${ANSI.dim}path: ${result.path}${ANSI.reset}`);
+    lines.push(`        ${ANSI.dim}path: ${sanitizeText(result.path)}${ANSI.reset}`);
   }
 
   if (result.expected !== undefined && result.actual !== undefined) {
@@ -118,10 +119,10 @@ export function formatTestTerminal(report: TestReport): string {
 function formatResultMarkdown(result: TestResult): string {
   const icon = STATUS_ICONS[result.status];
   const status = result.status.toUpperCase();
-  const lines = [`- ${icon} **${status}** ${result.description}`];
+  const lines = [`- ${icon} **${status}** ${escapeMarkdown(result.description)}`];
 
   if (result.message) {
-    lines.push(`  > ${result.message}`);
+    lines.push(`  > ${escapeMarkdown(result.message)}`);
   }
 
   return lines.join("\n");

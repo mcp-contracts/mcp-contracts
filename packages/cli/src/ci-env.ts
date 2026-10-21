@@ -1,3 +1,5 @@
+import { appendFileSync } from "node:fs";
+
 /** CI environment detection for automated pipelines. */
 
 /** Detected CI environment information. */
@@ -111,4 +113,42 @@ export function detectCIEnvironment(
     pullRequestNumber: null,
     repository: null,
   };
+}
+
+/** Upper bound for one step summary write, below GitHub's 1 MiB limit. */
+export const STEP_SUMMARY_MAX_BYTES = 900 * 1024;
+
+const TRUNCATION_NOTE =
+  "\n\n_Report truncated to fit the step summary size limit; see the job log for the full output._\n";
+
+/**
+ * Appends a markdown report to the CI step summary without ever failing the run.
+ *
+ * A summary is a side channel: a write error must not turn a contract result
+ * into a tool error, and an oversized summary must not be silently dropped by
+ * the CI provider. The content is truncated below the provider limit with an
+ * explicit note, and any write failure is reported on stderr.
+ *
+ * @param path - The step summary file path.
+ * @param markdown - The report to append.
+ * @returns True when the write succeeded.
+ */
+export function appendStepSummary(path: string, markdown: string): boolean {
+  let content = markdown;
+  if (Buffer.byteLength(content, "utf-8") > STEP_SUMMARY_MAX_BYTES) {
+    const budget = STEP_SUMMARY_MAX_BYTES - Buffer.byteLength(TRUNCATION_NOTE, "utf-8");
+    content =
+      Buffer.from(content, "utf-8")
+        .subarray(0, budget)
+        .toString("utf-8")
+        .replace(/\uFFFD$/, "") + TRUNCATION_NOTE;
+  }
+  try {
+    appendFileSync(path, `${content}\n`);
+    return true;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`Warning: Failed to write step summary: ${message}\n`);
+    return false;
+  }
 }

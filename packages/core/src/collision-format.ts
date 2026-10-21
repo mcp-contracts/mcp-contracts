@@ -6,6 +6,7 @@
 
 import type { CollisionReport, ToolCollision } from "./composition-types.js";
 import { ANSI } from "./format.js";
+import { markdownCode, sanitizeText } from "./sanitize.js";
 
 /** Icons per collision kind, matching diff severity icons. */
 const KIND_ICONS: Record<ToolCollision["kind"], string> = {
@@ -60,7 +61,7 @@ export function formatCollisionsTerminal(report: CollisionReport): string {
     const schemas = collision.kind === "conflicting" ? "schemas differ" : "identical schemas";
     lines.push(
       `${KIND_ICONS[collision.kind]} ${color}${collision.kind}${ANSI.reset}  ` +
-        `${ANSI.bold}${collision.toolName}${ANSI.reset} — ${collision.servers.join(", ")} (${schemas})`,
+        `${ANSI.bold}${sanitizeText(collision.toolName)}${ANSI.reset} — ${collision.servers.map(sanitizeText).join(", ")} (${schemas})`,
     );
     lines.push(`    ${ANSI.dim}${collision.suggestion}${ANSI.reset}`);
   }
@@ -98,8 +99,8 @@ export function formatCollisionsMarkdown(report: CollisionReport): string {
   for (const collision of report.collisions) {
     const schemas = collision.kind === "conflicting" ? "schemas differ" : "identical schemas";
     lines.push(
-      `- ${KIND_ICONS[collision.kind]} **${collision.kind}** — \`${collision.toolName}\` on ` +
-        `${collision.servers.map((s) => `\`${s}\``).join(", ")} (${schemas})`,
+      `- ${KIND_ICONS[collision.kind]} **${collision.kind}** — ${markdownCode(collision.toolName)} on ` +
+        `${collision.servers.map(markdownCode).join(", ")} (${schemas})`,
     );
     lines.push(`  - ${collision.suggestion}`);
   }

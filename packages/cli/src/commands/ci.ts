@@ -1,4 +1,3 @@
-import { appendFileSync } from "node:fs";
 import {
   createWebhookPayload,
   diffSnapshots,
@@ -7,7 +6,7 @@ import {
 } from "@mcp-contracts/core";
 import { Command } from "commander";
 import { verifyBaselineSignature } from "../baseline-signature.js";
-import { detectCIEnvironment } from "../ci-env.js";
+import { appendStepSummary, detectCIEnvironment } from "../ci-env.js";
 import {
   loadProjectConfig,
   resolveBaselinePath,
@@ -101,8 +100,7 @@ export function createCiCommand(): Command {
 
         // GitHub Actions step summary
         if (ciEnv.stepSummaryPath) {
-          const markdown = formatMarkdown(report);
-          appendFileSync(ciEnv.stepSummaryPath, `${markdown}\n`);
+          appendStepSummary(ciEnv.stepSummaryPath, formatMarkdown(report));
         }
 
         // Send webhook if configured

@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import type { MCPContractSnapshot, Severity } from "@mcp-contracts/core";
+import { sanitizeText } from "@mcp-contracts/core";
 import type { Command } from "commander";
 
 const VALID_SEVERITIES = new Set<string>(["safe", "warning", "breaking"]);
@@ -189,7 +190,7 @@ export function handleErrors<T extends (...args: never[]) => Promise<void>>(fn: 
         return;
       }
       const message = err instanceof Error ? err.message : String(err);
-      process.stderr.write(`Error: ${message}\n`);
+      process.stderr.write(`Error: ${sanitizeText(message)}\n`);
       process.exit(2);
     }
   };
