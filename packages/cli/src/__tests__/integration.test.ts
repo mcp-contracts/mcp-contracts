@@ -78,7 +78,7 @@ describe("integration: CLI", () => {
     it("exits 0 and prints version", async () => {
       const { stdout, exitCode } = await runCli("--version");
       expect(exitCode).toBe(0);
-      expect(stdout.trim()).toBe("0.8.3");
+      expect(stdout.trim()).toBe("0.9.0");
     });
   });
 
