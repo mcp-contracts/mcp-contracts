@@ -28,8 +28,12 @@ export interface CaptureOptions {
 export async function captureSnapshot(options: CaptureOptions): Promise<CaptureResult> {
   const { transport: config, quiet } = options;
 
+  const source =
+    config.transport === "stdio" ? [config.command, ...(config.args ?? [])].join(" ") : config.url;
+
   if (!quiet) {
-    process.stderr.write("Connecting to MCP server...\n");
+    // The config may come from a cloned repository; show what is about to run.
+    process.stderr.write(`Connecting to MCP server (${sanitizeText(source ?? "")})...\n`);
   }
 
   const { client, transport, protocolVersion } = await connectToServer(config);
@@ -53,9 +57,6 @@ export async function captureSnapshot(options: CaptureOptions): Promise<CaptureR
     protocolVersion,
     capabilities: serverCapabilities as Record<string, unknown>,
   };
-
-  const source =
-    config.transport === "stdio" ? [config.command, ...(config.args ?? [])].join(" ") : config.url;
 
   const capture: SnapshotCapture = {
     transport: config.transport,

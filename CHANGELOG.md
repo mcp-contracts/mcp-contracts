@@ -13,7 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Discovery pagination is bounded.** List calls stop after 1000 pages or 10 000 items per list, refuse a repeated cursor, and share a five-minute capture deadline. Exceeding a bound is a discovery failure (exit 2). Previously a server returning an endless `nextCursor` hung every live-capture command until the CI timeout.
 - **Server-controlled strings are sanitized before output.** Tool names, descriptions, server name and version, and server error messages pass through a sanitizer before reaching the terminal, markdown, step summaries or PR comments: terminal control sequences and control characters are removed regardless of `--no-color`, markdown metacharacters are escaped, inline code spans and fenced blocks are sized past any backtick run in the content. Applies to `check`, `ci`, `diff`, `inspect`, composition and collision reports, and `mcpdiff test` output.
 - **Step summary writes are guarded and capped.** A failure to write `GITHUB_STEP_SUMMARY` is a warning instead of exit 2, and content is truncated below GitHub's 1 MiB limit with an explicit note (#129).
+- **Baselines are verified before use.** `check`, `ci`, `watch` and the deprecated `baseline verify` recompute the baseline's content hash on read and refuse a file whose stored hash does not match its content, instead of trusting the stored hash on the fast path. `check --watch --verify-signature` re-verifies the signature every cycle rather than once at start. Supplying a private key where a public key is required is an error instead of being silently accepted (#127).
+- **`mcpdiff test --allow-extra-tools` skips only extra tools.** Added optional parameters, output fields, resources and prompts fail conformance again instead of being skipped. Duplicate tool, resource or prompt names within one server listing are a capture error instead of silently keeping the last definition. `mcpdiff test` honours the config `cwd` like `check` does (#130).
 - **Names equal to `__proto__` are kept.** Snapshot records and the canonical hash object are now null-prototype objects, so a tool, resource, prompt or nested schema key with that name is stored, hashed, signed and diffed instead of silently disappearing.
+
+### Changed
+
+- `SECURITY.md` gains a trust-model section: project configs execute a command, servers are untrusted, run contract checks on `pull_request` and supply signature keys from secrets. The README Project Config section links to it, and the resolved server command is printed before it is spawned (#126).
+- README and `mcpdiff init` CI snippets pin the CLI to an exact version and declare `permissions: contents: read`; the README now references an existing GitHub Action tag (#131). `--signature-key` warns when the key path is inside the working tree.
 
 ## [0.8.3] - 2026-10-21
 

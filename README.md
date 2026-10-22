@@ -329,6 +329,8 @@ Available on every command, in any position (`mcpdiff check --format json` and `
 
 Instead of repeating transport and baseline flags on every invocation, put them in an `mcpcontracts.json` at your project root. It is discovered by walking up from the current directory (like `tsconfig.json`), or passed explicitly with the global `--project <path>` option.
 
+> **The config executes a command.** `server.command`, `args` and `env` are run by every command that captures a live server. Treat `mcpcontracts.json` like `package.json` scripts: only run `mcpdiff` in repositories you trust, and review changes to it in pull requests. See the [trust model](./SECURITY.md#trust-model).
+
 ```jsonc
 {
   // How to reach your server — exactly one of the three transport shapes:
@@ -377,12 +379,14 @@ The easiest way to integrate with GitHub is the official action:
 # .github/workflows/mcp-contract.yml
 name: MCP Contract Check
 on: [pull_request]
+permissions:
+  contents: read
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: mcp-contracts/github-action@v0
+      - uses: mcp-contracts/github-action@v0.6.0
         with:
           baseline: contracts/baseline.mcpc.json
           command: node dist/index.js
@@ -404,24 +408,29 @@ Use `mcpdiff check` directly in any CI system:
 # .github/workflows/mcp-contract.yml
 name: MCP Contract Check
 on: [pull_request]
+permissions:
+  contents: read
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm install -g @mcp-contracts/cli
+      - run: npm install -g @mcp-contracts/cli@0.9.0   # pin to a release
       - run: mcpdiff check --baseline contracts/baseline.mcpc.json --command "node dist/index.js"
 
       # Or with a committed mcpcontracts.json, zero flags
       - run: mcpdiff check
 
-      # Or with signature verification
+      # Or with signature verification. The public key comes from a secret,
+      # never from the checkout: a pull request could otherwise replace key,
+      # baseline and signature together.
       - run: >
           mcpdiff check
           --baseline contracts/baseline.mcpc.json
           --command "node dist/index.js"
           --verify-signature
-          --signature-key ./public.pem
+        env:
+          MCP_SIGNATURE_KEY: ${{ secrets.MCP_PUBLIC_KEY }}
 ```
 
 The `check` command auto-detects the CI environment and selects the right output format (markdown for GitHub Actions, JSON otherwise). It also writes to `GITHUB_STEP_SUMMARY` automatically.
