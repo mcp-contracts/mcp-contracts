@@ -19,7 +19,7 @@ import {
   handleErrors,
   parseSeverity,
   printDeprecationNotice,
-  readSnapshotFile,
+  readVerifiedSnapshotFile,
   writeOutput,
 } from "../utils.js";
 import { sendWebhook } from "../webhook.js";
@@ -74,7 +74,7 @@ export function createCiCommand(): Command {
         if (!baselinePath) {
           throw new Error('--baseline is required (or set "baseline" in mcpcontracts.json)');
         }
-        const baseline = readSnapshotFile(baselinePath);
+        const baseline = readVerifiedSnapshotFile(baselinePath);
 
         // Verify baseline signature if requested
         if (options["verifySignature"] === true) {

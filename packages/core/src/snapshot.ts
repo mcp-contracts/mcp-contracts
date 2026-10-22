@@ -95,6 +95,9 @@ export function normalizeTools(tools: RawTool[]): Record<string, ToolContract> {
     if (tool.annotations !== undefined) {
       contract.annotations = tool.annotations;
     }
+    if (tool.name in result) {
+      throw new Error(`Duplicate tool name "${tool.name}" in server listing`);
+    }
     result[tool.name] = contract;
   }
   return result;
@@ -116,6 +119,9 @@ export function normalizeResources(
   // Null-prototype so a name of "__proto__" is stored as an own key, not dropped.
   const result: Record<string, ResourceContract> = Object.create(null);
   for (const resource of resources) {
+    if (resource.uri in result) {
+      throw new Error(`Duplicate resource URI "${resource.uri}" in server listing`);
+    }
     result[resource.uri] = {
       description: resource.description ?? "",
       isTemplate: false,
@@ -123,6 +129,9 @@ export function normalizeResources(
     };
   }
   for (const template of resourceTemplates) {
+    if (template.uriTemplate in result) {
+      throw new Error(`Duplicate resource URI "${template.uriTemplate}" in server listing`);
+    }
     result[template.uriTemplate] = {
       description: template.description ?? "",
       isTemplate: true,
@@ -152,6 +161,9 @@ export function normalizePrompts(prompts: RawPrompt[]): Record<string, PromptCon
       }
       return normalized;
     });
+    if (prompt.name in result) {
+      throw new Error(`Duplicate prompt name "${prompt.name}" in server listing`);
+    }
     result[prompt.name] = {
       description: prompt.description ?? "",
       arguments: args,

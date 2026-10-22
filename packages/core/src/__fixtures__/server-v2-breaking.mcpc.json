@@ -1,7 +1,7 @@
 {
   "snapshotVersion": "1.0.0",
   "capturedAt": "2026-02-01T10:00:00.000Z",
-  "contentHash": "sha256:placeholder",
+  "contentHash": "sha256:b83d6d13b481d361ce677fc659bd66b14c49e3c03fecb073f9f05e276943c122",
   "server": {
     "name": "contacts-server",
     "version": "2.0.0",

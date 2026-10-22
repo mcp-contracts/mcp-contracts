@@ -3,10 +3,10 @@
  */
 
 import { readFileSync } from "node:fs";
+import { isAbsolute, resolve, sep } from "node:path";
 import type { MCPContractSnapshot } from "@mcp-contracts/core";
 import { parseSignatureFile, verifySignature } from "@mcp-contracts/core";
 import { deriveSignaturePath } from "./commands/sign.js";
-import { CliExitError } from "./utils.js";
 
 /**
  * Verifies the baseline snapshot's signature before diffing.
@@ -37,8 +37,7 @@ export function verifyBaselineSignature(
   const result = verifySignature(baseline, sig, keyPem);
 
   if (!result.valid) {
-    process.stderr.write(`Baseline signature verification failed: ${result.error}\n`);
-    throw new CliExitError(2);
+    throw new Error(`Baseline signature verification failed: ${result.error}`);
   }
 
   if (!quiet) {
@@ -58,6 +57,13 @@ export function verifyBaselineSignature(
  */
 function resolveSignatureKey(optionValue: string | undefined): string {
   if (optionValue) {
+    if (!isAbsolute(optionValue) || resolve(optionValue).startsWith(`${process.cwd()}${sep}`)) {
+      process.stderr.write(
+        "Warning: --signature-key points inside the working tree. In CI, supply the public key " +
+          "from a secret (MCP_SIGNATURE_KEY), otherwise a pull request can replace key, baseline " +
+          "and signature together.\n",
+      );
+    }
     try {
       return readFileSync(optionValue, "utf-8");
     } catch (err) {

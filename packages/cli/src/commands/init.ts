@@ -24,12 +24,14 @@ import { captureSnapshot } from "./capture.js";
 const CI_SNIPPET = `# .github/workflows/mcp-contract.yml
 name: MCP Contract Check
 on: [pull_request]
+permissions:
+  contents: read
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm install -g @mcp-contracts/cli
+      - run: npm install -g @mcp-contracts/cli@0.9.0
       - run: mcpdiff check
 `;
 

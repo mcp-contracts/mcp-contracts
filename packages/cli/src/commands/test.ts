@@ -36,6 +36,7 @@ function toTestServerConfig(transport: ResolvedTransport): TestServerConfig {
     command: transport.command,
     args: transport.args,
     env: transport.env,
+    cwd: transport.cwd,
     url: transport.url,
     headers: transport.headers,
     timeoutMs: 30_000,

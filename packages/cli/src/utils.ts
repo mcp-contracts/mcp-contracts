@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import type { MCPContractSnapshot, Severity } from "@mcp-contracts/core";
-import { sanitizeText } from "@mcp-contracts/core";
+import { sanitizeText, verifyContentHash } from "@mcp-contracts/core";
 import type { Command } from "commander";
 
 const VALID_SEVERITIES = new Set<string>(["safe", "warning", "breaking"]);
@@ -149,6 +149,29 @@ export function writeOutput(content: string, outputPath: string | undefined): vo
 }
 
 /**
+ * Reads a snapshot file and verifies that its stored content hash matches its content.
+ *
+ * Used wherever a snapshot acts as a baseline. A baseline edited without being
+ * regenerated must not be compared against, because `check` trusts the stored
+ * hash on its fast path.
+ *
+ * @param filePath - Path to the `.mcpc.json` file.
+ * @returns The parsed snapshot.
+ * @throws Error when the file is invalid or its hash does not match its content.
+ */
+export function readVerifiedSnapshotFile(filePath: string): MCPContractSnapshot {
+  const snapshot = readSnapshotFile(filePath);
+  const hash = verifyContentHash(snapshot);
+  if (!hash.valid) {
+    throw new Error(
+      `Baseline "${filePath}" content hash mismatch: stored ${hash.expected} but recomputed ${hash.actual}. ` +
+        "The file was modified without being regenerated; re-capture it or restore it from version control.",
+    );
+  }
+  return snapshot;
+}
+
+/**
  * Strips ANSI escape codes from a string.
  *
  * @param str - The string potentially containing ANSI codes.
@@ -186,15 +209,43 @@ export function handleErrors<T extends (...args: never[]) => Promise<void>>(fn: 
       await fn(...args);
     } catch (err) {
       if (err instanceof CliExitError) {
+        await flushStdio();
         process.exit(err.exitCode);
         return;
       }
       const message = err instanceof Error ? err.message : String(err);
       process.stderr.write(`Error: ${sanitizeText(message)}\n`);
+      await flushStdio();
       process.exit(2);
     }
   };
   return wrapped as unknown as T;
+}
+
+/**
+ * Waits until everything written to stdout and stderr has been handed to the OS.
+ *
+ * When stdout is a pipe, writes are asynchronous and `process.exit()` discards
+ * whatever has not drained yet, so a large JSON report followed by a non-zero
+ * exit would reach the consumer truncated. Must be awaited before any exit
+ * that follows output.
+ *
+ * @returns Resolves once both streams have drained.
+ */
+export async function flushStdio(): Promise<void> {
+  await Promise.all(
+    [process.stdout, process.stderr].map(
+      (stream) =>
+        new Promise<void>((resolve) => {
+          // Nothing buffered (TTY and file writes complete synchronously): exit now.
+          if (stream.writableLength === 0) {
+            resolve();
+            return;
+          }
+          stream.write("", () => resolve());
+        }),
+    ),
+  );
 }
 
 /**

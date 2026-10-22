@@ -115,6 +115,11 @@ export function verifySignature(
   }
 
   // Step 3: Verify cryptographic signature
+  if (publicKeyPem.includes("PRIVATE KEY")) {
+    // Node would silently derive the public key, which hides a leaked signing
+    // key in CI configuration. Treat it as a misconfiguration instead.
+    throw new Error("Signature verification requires a public key, but a private key was supplied");
+  }
   const data = Buffer.from(signature.contentHash, "utf-8");
   const signatureBytes = Buffer.from(signature.signature, "base64");
   const publicKey = createPublicKey(publicKeyPem);

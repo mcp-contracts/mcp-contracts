@@ -85,9 +85,20 @@ describe("sign command", () => {
   });
 
   it("refuses to sign a snapshot with invalid content hash", async () => {
+    const tampered = JSON.parse(readFileSync(V1_PATH, "utf-8")) as MCPContractSnapshot;
+    tampered.contentHash = `sha256:${"0".repeat(64)}`;
+    const tamperedPath = join(tmpDir, "tampered.mcpc.json");
+    writeFileSync(tamperedPath, JSON.stringify(tampered, null, 2));
     const program = createProgram();
     try {
-      await program.parseAsync(["node", "mcpdiff", "sign", V1_PATH, "--key", ed25519PrivatePath]);
+      await program.parseAsync([
+        "node",
+        "mcpdiff",
+        "sign",
+        tamperedPath,
+        "--key",
+        ed25519PrivatePath,
+      ]);
     } catch {
       // expected process.exit
     }
