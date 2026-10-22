@@ -288,3 +288,26 @@ describe("createSnapshot", () => {
     expect(snapshot.tools.gamma.description).toBe("C");
   });
 });
+
+describe("duplicate names in one listing fail closed", () => {
+  it("rejects two tools with the same name", () => {
+    expect(() =>
+      normalizeTools([
+        { name: "delete", inputSchema: { type: "object" } },
+        { name: "delete", inputSchema: { type: "object", properties: { force: {} } } },
+      ]),
+    ).toThrow('Duplicate tool name "delete"');
+  });
+
+  it("rejects a resource URI that also appears as a template", () => {
+    expect(() =>
+      normalizeResources([{ uri: "x://y", name: "y" }], [{ uriTemplate: "x://y", name: "y" }]),
+    ).toThrow('Duplicate resource URI "x://y"');
+  });
+
+  it("rejects two prompts with the same name", () => {
+    expect(() => normalizePrompts([{ name: "p" }, { name: "p" }])).toThrow(
+      'Duplicate prompt name "p"',
+    );
+  });
+});

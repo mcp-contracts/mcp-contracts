@@ -24,6 +24,8 @@ export interface TestServerConfig {
   args?: string[];
   /** Environment variables for the server process. */
   env?: Record<string, string>;
+  /** Working directory for the spawned stdio server (defaults to the CWD). */
+  cwd?: string;
   /** Server URL for HTTP/SSE transports. */
   url?: string;
   /** Custom HTTP headers. */

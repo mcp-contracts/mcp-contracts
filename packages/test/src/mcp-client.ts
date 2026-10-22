@@ -51,6 +51,7 @@ export async function connectToServer(config: TestServerConfig): Promise<TestCon
       command: config.command,
       args: config.args,
       env: { ...getDefaultEnvironment(), ...config.env },
+      cwd: config.cwd,
     });
   } else if (config.transport === "sse") {
     if (!config.url) {

@@ -130,8 +130,27 @@ describe("runSchemaConformance", () => {
     ]);
 
     const results = await runSchemaConformance(connection, contract, { allowExtraTools: true });
-    const skipped = results.filter((r) => r.status === "skip");
-    expect(skipped.length).toBeGreaterThanOrEqual(0);
+    expect(results.map((r) => r.status)).toEqual(["skip"]);
+    expect(results[0]?.id).toBe("conformance.tool.extra_tool.added");
+  });
+
+  it("still fails on an added optional parameter when allowExtraTools is true", async () => {
+    const { runSchemaConformance } = await import("./schema-conformance.js");
+
+    const contract = createContract({
+      existing: { description: "E", inputSchema: { type: "object", properties: {} } },
+    });
+    const connection = createMockConnection([
+      {
+        name: "existing",
+        description: "E",
+        inputSchema: { type: "object", properties: { verbose: { type: "boolean" } } },
+      },
+    ]);
+
+    const results = await runSchemaConformance(connection, contract, { allowExtraTools: true });
+    expect(results.map((r) => r.status)).toEqual(["fail"]);
+    expect(results[0]?.path).toBe("inputSchema.properties.verbose");
   });
 
   it("skips tools in skipTools list", async () => {

@@ -23,8 +23,10 @@ function shouldSkipChange(change: SchemaChange, options: ConformanceOptions): bo
     return true;
   }
 
-  // Skip "tool added" changes if allowExtraTools is set
-  if (options.allowExtraTools && change.type === "added" && change.severity === "safe") {
+  // Skip only whole extra tools when allowExtraTools is set. Other "safe added"
+  // changes (new optional parameters, output fields, resources, prompts) are
+  // still contract drift and must fail.
+  if (options.allowExtraTools && change.id === `tool.${change.name}.added`) {
     return true;
   }
 
