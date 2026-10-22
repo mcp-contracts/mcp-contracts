@@ -187,13 +187,37 @@ program
 
       // Exit codes: 0 = all pass, 1 = failures, 2 = tool error
       if (report.summary.failed > 0 || report.summary.errors > 0) {
+        await flushStdio();
         process.exit(1);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       process.stderr.write(`Error: ${message}\n`);
+      await flushStdio();
       process.exit(2);
     }
   });
 
 program.parse();
+
+/**
+ * Waits until stdout and stderr have drained before a non-zero exit, so a
+ * large JSON report written to a pipe is not truncated by `process.exit()`.
+ *
+ * @returns Resolves once both streams have drained.
+ */
+async function flushStdio(): Promise<void> {
+  await Promise.all(
+    [process.stdout, process.stderr].map(
+      (stream) =>
+        new Promise<void>((resolve) => {
+          // Nothing buffered (TTY and file writes complete synchronously): exit now.
+          if (stream.writableLength === 0) {
+            resolve();
+            return;
+          }
+          stream.write("", () => resolve());
+        }),
+    ),
+  );
+}

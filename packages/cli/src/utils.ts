@@ -209,15 +209,43 @@ export function handleErrors<T extends (...args: never[]) => Promise<void>>(fn: 
       await fn(...args);
     } catch (err) {
       if (err instanceof CliExitError) {
+        await flushStdio();
         process.exit(err.exitCode);
         return;
       }
       const message = err instanceof Error ? err.message : String(err);
       process.stderr.write(`Error: ${sanitizeText(message)}\n`);
+      await flushStdio();
       process.exit(2);
     }
   };
   return wrapped as unknown as T;
+}
+
+/**
+ * Waits until everything written to stdout and stderr has been handed to the OS.
+ *
+ * When stdout is a pipe, writes are asynchronous and `process.exit()` discards
+ * whatever has not drained yet, so a large JSON report followed by a non-zero
+ * exit would reach the consumer truncated. Must be awaited before any exit
+ * that follows output.
+ *
+ * @returns Resolves once both streams have drained.
+ */
+export async function flushStdio(): Promise<void> {
+  await Promise.all(
+    [process.stdout, process.stderr].map(
+      (stream) =>
+        new Promise<void>((resolve) => {
+          // Nothing buffered (TTY and file writes complete synchronously): exit now.
+          if (stream.writableLength === 0) {
+            resolve();
+            return;
+          }
+          stream.write("", () => resolve());
+        }),
+    ),
+  );
 }
 
 /**

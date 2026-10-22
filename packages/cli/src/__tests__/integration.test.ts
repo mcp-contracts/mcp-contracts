@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
+import { createSnapshot } from "@mcp-contracts/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
@@ -746,5 +747,53 @@ describe("integration: failed discovery", () => {
     expect(exitCode).toBe(2);
     expect(stderr).toContain("Discovery incomplete");
     expect(stderr).not.toContain("Contract unchanged");
+  });
+});
+
+describe("integration: large JSON output on a non-zero exit", () => {
+  let workDir: string;
+
+  beforeEach(() => {
+    workDir = mkdtempSync(join(tmpdir(), "mcpc-flush-"));
+  });
+
+  afterEach(() => {
+    rmSync(workDir, { recursive: true, force: true });
+  });
+
+  it("is not truncated when stdout is a pipe", async () => {
+    // 200 tools whose descriptions all change: the JSON report carries every
+    // before/after pair and comfortably exceeds the 64 KiB pipe buffer.
+    const build = (suffix: string) =>
+      createSnapshot({
+        server: { name: "big", version: "1", protocolVersion: "2025-03-26", capabilities: {} },
+        tools: Array.from({ length: 200 }, (_, i) => ({
+          name: `tool_${i}`,
+          description: `${"d".repeat(1024)} ${suffix}`,
+          inputSchema: { type: "object" },
+        })),
+        resources: [],
+        resourceTemplates: [],
+        prompts: [],
+        capture: { transport: "stdio", source: "node big.js", tool: "test" },
+      });
+    const before = join(workDir, "before.mcpc.json");
+    const after = join(workDir, "after.mcpc.json");
+    writeFileSync(before, JSON.stringify(build("a")));
+    writeFileSync(after, JSON.stringify(build("b")));
+
+    const { stdout, exitCode } = await runCli(
+      "diff",
+      before,
+      after,
+      "--format",
+      "json",
+      "--fail-on",
+      "warning",
+    );
+    expect(exitCode).toBe(1);
+    expect(Buffer.byteLength(stdout, "utf-8")).toBeGreaterThan(131072);
+    expect(() => JSON.parse(stdout)).not.toThrow();
+    expect(JSON.parse(stdout).summary.warning).toBe(200);
   });
 });
