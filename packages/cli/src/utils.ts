@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import type { MCPContractSnapshot, Severity } from "@mcp-contracts/core";
-import { sanitizeText } from "@mcp-contracts/core";
+import { sanitizeText, verifyContentHash } from "@mcp-contracts/core";
 import type { Command } from "commander";
 
 const VALID_SEVERITIES = new Set<string>(["safe", "warning", "breaking"]);
@@ -146,6 +146,29 @@ export function writeOutput(content: string, outputPath: string | undefined): vo
   } else {
     process.stdout.write(content);
   }
+}
+
+/**
+ * Reads a snapshot file and verifies that its stored content hash matches its content.
+ *
+ * Used wherever a snapshot acts as a baseline. A baseline edited without being
+ * regenerated must not be compared against, because `check` trusts the stored
+ * hash on its fast path.
+ *
+ * @param filePath - Path to the `.mcpc.json` file.
+ * @returns The parsed snapshot.
+ * @throws Error when the file is invalid or its hash does not match its content.
+ */
+export function readVerifiedSnapshotFile(filePath: string): MCPContractSnapshot {
+  const snapshot = readSnapshotFile(filePath);
+  const hash = verifyContentHash(snapshot);
+  if (!hash.valid) {
+    throw new Error(
+      `Baseline "${filePath}" content hash mismatch: stored ${hash.expected} but recomputed ${hash.actual}. ` +
+        "The file was modified without being regenerated; re-capture it or restore it from version control.",
+    );
+  }
+  return snapshot;
 }
 
 /**

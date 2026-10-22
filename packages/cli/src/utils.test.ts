@@ -1,7 +1,16 @@
-import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { parseEnvPairs, readSnapshotFile, resolveFormat, stripAnsi, writeOutput } from "./utils.js";
+import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { createSnapshot } from "@mcp-contracts/core";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  parseEnvPairs,
+  readSnapshotFile,
+  readVerifiedSnapshotFile,
+  resolveFormat,
+  stripAnsi,
+  writeOutput,
+} from "./utils.js";
 
 const FIXTURES_DIR = resolve(import.meta.dirname, "../../core/src/__fixtures__");
 
@@ -122,5 +131,38 @@ describe("parseEnvPairs", () => {
 
   it("throws on missing =", () => {
     expect(() => parseEnvPairs(["NOEQ"])).toThrow("expected KEY=VALUE format");
+  });
+});
+
+describe("readVerifiedSnapshotFile", () => {
+  let dir: string;
+  const snapshot = createSnapshot({
+    server: { name: "s", version: "1", protocolVersion: "2025-03-26", capabilities: {} },
+    tools: [{ name: "t", inputSchema: { type: "object" } }],
+    resources: [],
+    resourceTemplates: [],
+    prompts: [],
+    capture: { transport: "stdio", source: "node s.js", tool: "test" },
+  });
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "mcpc-verified-"));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("returns a snapshot whose hash matches its content", () => {
+    const path = join(dir, "ok.mcpc.json");
+    writeFileSync(path, JSON.stringify(snapshot));
+    expect(readVerifiedSnapshotFile(path).contentHash).toBe(snapshot.contentHash);
+  });
+
+  it("rejects a snapshot edited without regenerating its hash", () => {
+    const path = join(dir, "edited.mcpc.json");
+    const edited = { ...snapshot, tools: {} };
+    writeFileSync(path, JSON.stringify(edited));
+    expect(() => readVerifiedSnapshotFile(path)).toThrow("content hash mismatch");
   });
 });

@@ -14,7 +14,7 @@ import {
   getRootOpts,
   handleErrors,
   printDeprecationNotice,
-  readSnapshotFile,
+  readVerifiedSnapshotFile,
   writeOutput,
 } from "../utils.js";
 import { captureSnapshot } from "./capture.js";
@@ -92,7 +92,7 @@ export function createBaselineVerifyCommand(): Command {
           resolveBaselinePath(options["baseline"] as string | undefined, project) ??
           DEFAULT_BASELINE_PATH;
 
-        const baseline = readSnapshotFile(baselinePath);
+        const baseline = readVerifiedSnapshotFile(baselinePath);
 
         const config = resolveTransportOrProject(options, project);
 

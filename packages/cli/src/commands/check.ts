@@ -18,7 +18,7 @@ import {
   getRootOpts,
   handleErrors,
   type OutputFormat,
-  readSnapshotFile,
+  readVerifiedSnapshotFile,
   resolveFormat,
   stripAnsi,
   writeOutput,
@@ -105,7 +105,7 @@ export function createCheckCommand(): Command {
         const { severity, failOn, debounceMs, watchPaths, baselinePath, webhookUrl, shouldClear } =
           resolveWatchOptions(options, project);
 
-        const baseline = readSnapshotFile(baselinePath);
+        const baseline = readVerifiedSnapshotFile(baselinePath);
 
         if (options["verifySignature"] === true) {
           verifyBaselineSignature(
@@ -129,6 +129,8 @@ export function createCheckCommand(): Command {
             webhookUrl,
             shouldClear,
             quiet,
+            verifySignature: options["verifySignature"] === true,
+            signatureKey: options["signatureKey"] as string | undefined,
           });
           return;
         }

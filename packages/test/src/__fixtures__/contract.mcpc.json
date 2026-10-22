@@ -1,7 +1,7 @@
 {
   "snapshotVersion": "1.0.0",
   "capturedAt": "2026-01-15T10:00:00.000Z",
-  "contentHash": "sha256:placeholder",
+  "contentHash": "sha256:0d1823615600f7ec6f211638d615c85d8e9c6ed80448923d15ea82d01875741d",
   "server": {
     "name": "test-server",
     "version": "1.0.0",

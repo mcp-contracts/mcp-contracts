@@ -21,9 +21,10 @@ import {
   formatTerminal,
   SEVERITY_ORDER,
 } from "@mcp-contracts/core";
+import { verifyBaselineSignature } from "./baseline-signature.js";
 import { captureSnapshot } from "./commands/capture.js";
 import type { ResolvedTransport } from "./commands/mcp-client.js";
-import { readSnapshotFile } from "./utils.js";
+import { readVerifiedSnapshotFile } from "./utils.js";
 import {
   clearScreen,
   formatWatchCycle,
@@ -52,6 +53,10 @@ export interface WatchLoopParams {
   shouldClear: boolean;
   /** Suppress non-essential output. */
   quiet: boolean;
+  /** Re-verify the baseline signature on every cycle. */
+  verifySignature?: boolean;
+  /** The --signature-key option value, if provided. */
+  signatureKey?: string;
 }
 
 /**
@@ -168,7 +173,10 @@ export async function runWatchLoop(params: WatchLoopParams): Promise<void> {
     let event: WatchDiffEvent;
 
     try {
-      const baseline = readSnapshotFile(baselinePath);
+      const baseline = readVerifiedSnapshotFile(baselinePath);
+      if (params.verifySignature) {
+        verifyBaselineSignature(baseline, baselinePath, params.signatureKey, true);
+      }
       const { snapshot: current } = await captureSnapshot({ transport, quiet: true });
       const report = diffSnapshots(baseline, current, { minSeverity: config.minSeverity });
 

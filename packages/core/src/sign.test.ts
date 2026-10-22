@@ -9,6 +9,7 @@ import {
   verifySignature,
 } from "./sign.js";
 import type { DetachedSignature } from "./sign-types.js";
+import { createSnapshot } from "./snapshot.js";
 import type { MCPContractSnapshot } from "./types.js";
 
 let ed25519Private: string;
@@ -236,5 +237,30 @@ describe("parseSignatureFile", () => {
       signature: "data",
     });
     expect(() => parseSignatureFile(json)).toThrow('missing "signedAt"');
+  });
+});
+
+describe("verifySignature refuses a private key", () => {
+  it("throws a misconfiguration error instead of deriving the public key", () => {
+    const snapshot = createSnapshot({
+      server: { name: "s", version: "1", protocolVersion: "2025-03-26", capabilities: {} },
+      tools: [],
+      resources: [],
+      resourceTemplates: [],
+      prompts: [],
+      capture: { transport: "stdio", source: "node s.js", tool: "test" },
+    });
+    const { privateKey } = generateKeyPairSync("ed25519");
+    const privatePem = privateKey.export({ type: "pkcs8", format: "pem" }) as string;
+    const signature = {
+      version: "1.0.0",
+      algorithm: "Ed25519",
+      contentHash: snapshot.contentHash,
+      signature: "AAAA",
+      signedAt: "2026-01-01T00:00:00Z",
+    } as unknown as DetachedSignature;
+    expect(() => verifySignature(snapshot, signature, privatePem)).toThrow(
+      "requires a public key, but a private key was supplied",
+    );
   });
 });
