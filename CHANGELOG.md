@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Tightened input constraints are classified as `breaking`.** Adding or changing `pattern`, `const` or `format`, adding an `enum` to an unrestricted parameter, and changing, narrowing or adding array `items` all reject inputs that were valid before and are now reported as `breaking`. Removing any of them is `safe`. Previously `format` changes were `warning` and the rest fell through to the `unclassified` warning (#137).
+
 ## [0.9.0] - 2026-10-22
 
 ### Fixed
