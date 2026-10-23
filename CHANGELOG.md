@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading
+
+Four behaviours change in this release. None requires a different command line, but each can change a result you were used to:
+
+- **`check` and `diff` may now exit 1 where they exited 0.** Adding or changing a parameter's `format`, `pattern` or `const`, restricting an open parameter to an `enum`, and adding, changing or narrowing array `items` are `breaking`. Until now `format` was a `warning` and the others were `unclassified` warnings. If a server of yours tightened an input on purpose, re-capture the baseline with `mcpdiff update`; if it tightened one by accident, this is the release that tells you.
+- **Plain-http webhooks to non-loopback hosts are refused.** Use an `https` receiver, or set `MCP_WEBHOOK_ALLOW_INSECURE=1` to keep the old behaviour. Redirects are no longer followed. Set `MCP_WEBHOOK_SECRET` to have payloads signed.
+- **A config above the repository root is no longer found.** Discovery stops at the first directory containing `.git`. Move the `mcpcontracts.json` into the repository or pass `--project <path>`.
+- **Config paths outside the project warn.** `baseline`, `watch.paths` and `server.config` values that resolve outside the config file's directory print a warning naming the key. Nothing is rejected yet; that follows in a later minor release. Move the files into the project or expect the warning.
+
+Everything else in this release is additive: environment references in config values, the negotiated protocol version in snapshots, redacted URLs in `capture.source`.
+
 ### Internal
 
 - **CI supply chain tightened.** Workflow actions are pinned to commit SHAs with version comments, the CI workflow runs with a read-only token, the publish workflow publishes an explicitly named tarball instead of a glob, Dependabot now updates the release-notes action, and a repository ruleset restricts creating, moving or deleting `v*` tags to administrators (#135).
