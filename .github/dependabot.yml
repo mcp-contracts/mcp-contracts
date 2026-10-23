@@ -23,5 +23,3 @@ updates:
       all-actions:
         patterns:
           - "*"
-    ignore:
-      - dependency-name: "lukekania/generate-release-notes"

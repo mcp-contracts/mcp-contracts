@@ -78,6 +78,28 @@ describe("captureSnapshot", () => {
     expect(result.snapshot.capture.source).toBe("http://localhost:3000/mcp");
   });
 
+  it("reduces the URL to origin and path before recording capture.source", async () => {
+    const result = await captureSnapshot({
+      transport: {
+        transport: "streamable-http",
+        url: "https://user:s3cret@host.example/mcp?api_key=abc#frag",
+      },
+    });
+    expect(result.snapshot.capture.source).toBe("https://host.example/mcp");
+  });
+
+  it("prefers the unexpanded template over the expanded url for capture.source", async () => {
+    const result = await captureSnapshot({
+      transport: {
+        transport: "streamable-http",
+        url: "https://host.example/t0k3n/mcp",
+        displaySource: `https://host.example/${["$", "{TOKEN}"].join("")}/mcp`,
+      },
+    });
+    expect(result.snapshot.capture.source).toBe("https://host.example/$%7BTOKEN%7D/mcp");
+    expect(result.snapshot.capture.source).not.toContain("t0k3n");
+  });
+
   it("prints connection messages when not quiet", async () => {
     await captureSnapshot({
       transport: { transport: "stdio", command: "node" },

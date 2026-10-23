@@ -116,6 +116,8 @@ This ensures that two snapshots with identical tool/resource/prompt definitions 
 
 ---
 
+**What the hash does not cover.** `server` (name, version, protocol version, capabilities), `capture` and `capturedAt` are informational. They appear in reports but are neither hashed nor signed, so a signature does not vouch for them, and `check` does not classify changes to them. Integrity protection applies to `tools`, `resources` and `prompts` only.
+
 ## 2. Diff Classification Rules
 
 When comparing two snapshots (referred to as `before` and `after`), changes are classified into three severity levels.
@@ -155,7 +157,14 @@ The classification is exhaustive by construction: if an entity present in both s
 | Enum values added | `safe` | Old values still valid. |
 | Parameter description changed | `warning` | Same tool poisoning concern as tool description. |
 | Parameter `default` changed | `warning` | May change behavior for calls that omit the parameter. |
-| Parameter `format` added or changed | `warning` | May cause previously valid inputs to fail. |
+| Parameter `format` added or changed | `breaking` | Previously valid inputs fail validation. |
+| Parameter `format` removed | `safe` | More permissive. |
+| Parameter `pattern` or `const` added or changed | `breaking` | Previously valid inputs fail validation. |
+| Parameter `pattern` or `const` removed | `safe` | More permissive. |
+| Enum restriction added to an unrestricted parameter | `breaking` | Only the listed values are accepted now. |
+| Enum restriction removed entirely | `safe` | More permissive. |
+| Array `items` type changed or narrowed, or `items` added | `breaking` | Existing element values fail validation. |
+| Array `items` type widened, or `items` removed | `safe` | Old elements still valid. |
 | `additionalProperties` changed from true/unset to false | `breaking` | Previously accepted extra fields will now be rejected. |
 | `additionalProperties` changed from false to true/unset | `safe` | More permissive. |
 | `minItems`, `maxItems`, `minLength`, `maxLength`, `minimum`, `maximum` made stricter | `breaking` | Previously valid values may now fail. |

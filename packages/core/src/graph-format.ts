@@ -6,18 +6,39 @@
  */
 
 import type { DependencyGraph, GraphOverlap } from "./composition-types.js";
+import { sanitizeText } from "./sanitize.js";
 
 /** Output formats supported by the graph command. */
 export type GraphFormat = "terminal" | "mermaid" | "dot" | "json";
 
 /**
- * Escapes a label for safe embedding in double-quoted Mermaid/DOT strings.
+ * Escapes a label for safe embedding in a double-quoted DOT string.
  *
  * @param label - The raw label text.
- * @returns The escaped label.
+ * @returns The escaped label, with control sequences removed.
  */
-function escapeLabel(label: string): string {
-  return label.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+function escapeDot(label: string): string {
+  return sanitizeText(label)
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/[\r\n]+/g, " ");
+}
+
+/**
+ * Escapes a label for a Mermaid node. Mermaid does not honour backslash
+ * escapes inside quoted labels; it uses HTML-style entities instead.
+ *
+ * @param label - The raw label text.
+ * @returns The escaped label, with control sequences removed.
+ */
+function escapeMermaid(label: string): string {
+  return sanitizeText(label)
+    .replace(/#/g, "#35;")
+    .replace(/"/g, "#quot;")
+    .replace(/</g, "#lt;")
+    .replace(/>/g, "#gt;")
+    .replace(/[[\]{}()|]/g, (c) => `#${c.charCodeAt(0)};`)
+    .replace(/[\r\n]+/g, " ");
 }
 
 /**
@@ -91,13 +112,13 @@ export function formatGraphMermaid(graph: DependencyGraph): string {
   for (const server of graph.servers) {
     const id = serverIds.get(server.name);
     lines.push(
-      `  ${id}["${escapeLabel(server.name)} v${escapeLabel(server.version)} (${server.tools.length} tools)"]`,
+      `  ${id}["${escapeMermaid(server.name)} v${escapeMermaid(server.version)} (${server.tools.length} tools)"]`,
     );
   }
 
   graph.overlaps.forEach((overlap, index) => {
     const toolId = `t${index}`;
-    lines.push(`  ${toolId}(["${escapeLabel(overlap.toolName)}"])`);
+    lines.push(`  ${toolId}(["${escapeMermaid(overlap.toolName)}"])`);
     for (const serverName of overlap.servers) {
       const serverId = serverIds.get(serverName);
       const edge = overlap.identical ? "---" : "-. conflict .-";
@@ -119,18 +140,18 @@ export function formatGraphDot(graph: DependencyGraph): string {
   lines.push("  node [fontname=Helvetica];");
 
   for (const server of graph.servers) {
-    const label = `${server.name}\\nv${server.version} (${server.tools.length} tools)`;
-    lines.push(`  "${escapeLabel(server.name)}" [shape=box, label="${label}"];`);
+    const label = `${escapeDot(server.name)}\\nv${escapeDot(server.version)} (${server.tools.length} tools)`;
+    lines.push(`  "${escapeDot(server.name)}" [shape=box, label="${label}"];`);
   }
 
   for (const overlap of graph.overlaps) {
     const toolNode = `tool:${overlap.toolName}`;
     const style = overlap.identical ? "" : ", color=red";
     lines.push(
-      `  "${escapeLabel(toolNode)}" [shape=ellipse, label="${escapeLabel(overlap.toolName)}"${style}];`,
+      `  "${escapeDot(toolNode)}" [shape=ellipse, label="${escapeDot(overlap.toolName)}"${style}];`,
     );
     for (const serverName of overlap.servers) {
-      lines.push(`  "${escapeLabel(serverName)}" -- "${escapeLabel(toolNode)}";`);
+      lines.push(`  "${escapeDot(serverName)}" -- "${escapeDot(toolNode)}";`);
     }
   }
 

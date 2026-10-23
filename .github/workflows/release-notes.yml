@@ -13,7 +13,7 @@ jobs:
   notes:
     runs-on: ubuntu-latest
     steps:
-      - uses: lukekania/generate-release-notes@v0.4.1
+      - uses: lukekania/generate-release-notes@7a5fb2f90238819f447aac3a0bbf6a8344253e14 # v0.4.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_conventional_commits: true

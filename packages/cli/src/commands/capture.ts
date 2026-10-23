@@ -29,7 +29,9 @@ export async function captureSnapshot(options: CaptureOptions): Promise<CaptureR
   const { transport: config, quiet } = options;
 
   const source =
-    config.transport === "stdio" ? [config.command, ...(config.args ?? [])].join(" ") : config.url;
+    config.transport === "stdio"
+      ? [config.command, ...(config.args ?? [])].join(" ")
+      : redactUrl(config.displaySource ?? config.url);
 
   if (!quiet) {
     // The config may come from a cloned repository; show what is about to run.
@@ -74,4 +76,21 @@ export async function captureSnapshot(options: CaptureOptions): Promise<CaptureR
   });
 
   return { snapshot, serverName: name, serverVersion: version };
+}
+
+/**
+ * Reduces a URL to origin and path so credentials never land in a committed
+ * snapshot or a log line: userinfo, query string and fragment are dropped.
+ *
+ * @param url - The server URL, or undefined.
+ * @returns The redacted URL, or the input up to any "?" when it cannot be parsed.
+ */
+function redactUrl(url: string | undefined): string | undefined {
+  if (!url) return url;
+  try {
+    const parsed = new URL(url);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return url.split("?")[0]?.split("#")[0];
+  }
 }

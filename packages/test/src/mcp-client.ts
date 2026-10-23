@@ -69,6 +69,14 @@ export async function connectToServer(config: TestServerConfig): Promise<TestCon
       : new StreamableHTTPClientTransport(new URL(config.url));
   }
 
+  // Record the negotiated protocol version via the transport hook the SDK calls.
+  let negotiated: string | undefined;
+  const forward = transport.setProtocolVersion?.bind(transport);
+  transport.setProtocolVersion = (version: string) => {
+    negotiated = version;
+    forward?.(version);
+  };
+
   await client.connect(transport, { signal: AbortSignal.timeout(timeoutMs) });
 
   const serverVersion = client.getServerVersion();
@@ -78,7 +86,7 @@ export async function connectToServer(config: TestServerConfig): Promise<TestCon
     transport,
     serverName: serverVersion?.name ?? "unknown",
     serverVersion: serverVersion?.version ?? "unknown",
-    protocolVersion: LATEST_PROTOCOL_VERSION,
+    protocolVersion: negotiated ?? LATEST_PROTOCOL_VERSION,
   };
 }
 

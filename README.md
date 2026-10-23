@@ -216,6 +216,8 @@ Auto-detects CI environments (GitHub Actions, GitLab CI, CircleCI) and selects t
 
 **Exit codes:** `0` = clean, `1` = changes at or above the `--fail-on` threshold, `2` = error.
 
+**Webhooks.** `--webhook <url>` POSTs a JSON payload (`event`, `timestamp`, `source`, `report`) after each diff. Delivery is best-effort and never changes the exit code; a failure is a warning on stderr. The URL must be `https`, except loopback hosts for local receivers; set `MCP_WEBHOOK_ALLOW_INSECURE=1` to override. Redirects are not followed. Set `MCP_WEBHOOK_SECRET` to have the body signed: the receiver recomputes `sha256=<HMAC-SHA256 of the raw body>` and compares it to the `X-MCP-Signature` header before trusting the event.
+
 ### `mcpdiff update`
 
 Captures the live server and writes the baseline. The counterpart to `check`.
@@ -327,7 +329,9 @@ Available on every command, in any position (`mcpdiff check --format json` and `
 
 ## Project Config (`mcpcontracts.json`)
 
-Instead of repeating transport and baseline flags on every invocation, put them in an `mcpcontracts.json` at your project root. It is discovered by walking up from the current directory (like `tsconfig.json`), or passed explicitly with the global `--project <path>` option.
+Instead of repeating transport and baseline flags on every invocation, put them in an `mcpcontracts.json` at your project root. It is discovered by walking up from the current directory to the repository root (the first directory containing `.git`), or passed explicitly with the global `--project <path>` option. Paths in the config (`baseline`, `watch.paths`, `server.config`) should stay inside the project directory; a path that resolves outside it is warned about and will be rejected in a future release.
+
+> **Never commit literal secrets.** `env`, `headers` and `url` values may reference environment variables as `${NAME}`; they are expanded at run time and a missing variable is an error. A snapshot's `capture.source` records the command line or the URL without credentials.
 
 > **The config executes a command.** `server.command`, `args` and `env` are run by every command that captures a live server. Treat `mcpcontracts.json` like `package.json` scripts: only run `mcpdiff` in repositories you trust, and review changes to it in pull requests. See the [trust model](./SECURITY.md#trust-model).
 
@@ -337,8 +341,8 @@ Instead of repeating transport and baseline flags on every invocation, put them 
   "server": {
     "command": "node",
     "args": ["dist/index.js"],
-    "env": { "API_KEY": "..." }
-    // or: "url": "http://localhost:3000/mcp", "sse": true, "headers": { "Authorization": "..." }
+    "env": { "API_KEY": "${CONTACTS_API_KEY}" }
+    // or: "url": "http://localhost:3000/mcp", "sse": true, "headers": { "Authorization": "Bearer ${CONTACTS_TOKEN}" }
     // or: "config": "./mcp.json", "name": "my-server"
   },
   "baseline": "contracts/baseline.mcpc.json",
