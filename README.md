@@ -329,7 +329,7 @@ Available on every command, in any position (`mcpdiff check --format json` and `
 
 ## Project Config (`mcpcontracts.json`)
 
-Instead of repeating transport and baseline flags on every invocation, put them in an `mcpcontracts.json` at your project root. It is discovered by walking up from the current directory (like `tsconfig.json`), or passed explicitly with the global `--project <path>` option.
+Instead of repeating transport and baseline flags on every invocation, put them in an `mcpcontracts.json` at your project root. It is discovered by walking up from the current directory to the repository root (the first directory containing `.git`), or passed explicitly with the global `--project <path>` option. Paths in the config (`baseline`, `watch.paths`, `server.config`) should stay inside the project directory; a path that resolves outside it is warned about and will be rejected in a future release.
 
 > **Never commit literal secrets.** `env`, `headers` and `url` values may reference environment variables as `${NAME}`; they are expanded at run time and a missing variable is an error. A snapshot's `capture.source` records the command line or the URL without credentials.
 
