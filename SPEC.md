@@ -116,6 +116,8 @@ This ensures that two snapshots with identical tool/resource/prompt definitions 
 
 ---
 
+**What the hash does not cover.** `server` (name, version, protocol version, capabilities), `capture` and `capturedAt` are informational. They appear in reports but are neither hashed nor signed, so a signature does not vouch for them, and `check` does not classify changes to them. Integrity protection applies to `tools`, `resources` and `prompts` only.
+
 ## 2. Diff Classification Rules
 
 When comparing two snapshots (referred to as `before` and `after`), changes are classified into three severity levels.

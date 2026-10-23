@@ -79,9 +79,19 @@ export async function connectToServer(config: ResolvedTransport): Promise<Connec
       : new StreamableHTTPClientTransport(new URL(config.url));
   }
 
+  // The SDK reports the negotiated protocol version to the transport (when the
+  // transport exposes the hook) and nowhere else; record it so the snapshot
+  // carries the version actually in use rather than the SDK's latest constant.
+  let negotiated: string | undefined;
+  const forward = transport.setProtocolVersion?.bind(transport);
+  transport.setProtocolVersion = (version: string) => {
+    negotiated = version;
+    forward?.(version);
+  };
+
   await client.connect(transport, { signal: AbortSignal.timeout(30_000) });
 
-  return { client, transport, protocolVersion: LATEST_PROTOCOL_VERSION };
+  return { client, transport, protocolVersion: negotiated ?? LATEST_PROTOCOL_VERSION };
 }
 
 /** A list call that failed for a capability the server advertises. */

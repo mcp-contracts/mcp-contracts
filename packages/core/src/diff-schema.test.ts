@@ -407,6 +407,25 @@ describe("diffSchemas — input schema changes", () => {
     expect(constrained?.severity).toBe("breaking");
   });
 
+  it("tolerates malformed nested required and enum without throwing", () => {
+    const before = {
+      type: "object",
+      properties: { opts: { type: "object", properties: { a: { type: "string" } } } },
+    } as unknown as JSONSchema;
+    const after = {
+      type: "object",
+      properties: {
+        opts: {
+          type: "object",
+          properties: { a: { type: "string", enum: 5 } },
+          required: 5,
+        },
+      },
+    } as unknown as JSONSchema;
+    expect(() => inputDiff(before, after)).not.toThrow();
+    expect(() => inputDiff(after, before)).not.toThrow();
+  });
+
   it("recurses into nested object schemas", () => {
     const before: JSONSchema = {
       type: "object",

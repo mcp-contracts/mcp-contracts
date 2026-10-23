@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   discoverProjectConfig,
+  expandEnvRefs,
   type LoadedProjectConfig,
   loadProjectConfig,
   resolveBaselinePath,
@@ -304,5 +305,60 @@ describe("resolveProjectPath confinement warnings", () => {
     symlinkSync(join(dir, "target"), join(dir, "project", "contracts"));
     resolveProjectPath(project(), "contracts/baseline.mcpc.json", "baseline");
     expect(stderr).toHaveBeenCalledWith(expect.stringContaining("resolves to"));
+  });
+});
+
+/** Builds a `${NAME}` reference without tripping the template-placeholder lint rule. */
+const ref = (name: string): string => ["$", "{", name, "}"].join("");
+
+describe("expandEnvRefs", () => {
+  it("replaces ${NAME} references from the environment", () => {
+    expect(
+      expandEnvRefs(`Bearer ${ref("TOKEN")}`, "server.headers.Authorization", { TOKEN: "abc" }),
+    ).toBe("Bearer abc");
+    expect(
+      expandEnvRefs(`https://${ref("HOST")}/mcp?k=${ref("KEY")}`, "server.url", {
+        HOST: "h",
+        KEY: "v",
+      }),
+    ).toBe("https://h/mcp?k=v");
+  });
+
+  it("leaves values without references unchanged", () => {
+    expect(expandEnvRefs("plain", "server.env.X", {})).toBe("plain");
+  });
+
+  it("throws when a referenced variable is not set", () => {
+    expect(() => expandEnvRefs(ref("MISSING"), "server.env.API_KEY", {})).toThrow(
+      'server.env.API_KEY references environment variable "MISSING", which is not set',
+    );
+  });
+});
+
+describe("resolveProjectTransport expands environment references", () => {
+  it("expands env and header values and the url", () => {
+    process.env["MCPC_TEST_TOKEN"] = "t0k";
+    try {
+      const url = resolveProjectTransport({
+        path: "/p/mcpcontracts.json",
+        dir: "/p",
+        config: {
+          server: {
+            url: `https://x/${ref("MCPC_TEST_TOKEN")}`,
+            headers: { A: ref("MCPC_TEST_TOKEN") },
+          },
+        },
+      });
+      expect(url.url).toBe("https://x/t0k");
+      expect(url.headers).toEqual({ A: "t0k" });
+      const stdio = resolveProjectTransport({
+        path: "/p/mcpcontracts.json",
+        dir: "/p",
+        config: { server: { command: "node s.js", env: { KEY: ref("MCPC_TEST_TOKEN") } } },
+      });
+      expect(stdio.env).toEqual({ KEY: "t0k" });
+    } finally {
+      delete process.env["MCPC_TEST_TOKEN"];
+    }
   });
 });

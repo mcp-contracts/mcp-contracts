@@ -29,7 +29,9 @@ export async function captureSnapshot(options: CaptureOptions): Promise<CaptureR
   const { transport: config, quiet } = options;
 
   const source =
-    config.transport === "stdio" ? [config.command, ...(config.args ?? [])].join(" ") : config.url;
+    config.transport === "stdio"
+      ? [config.command, ...(config.args ?? [])].join(" ")
+      : stripUrlCredentials(config.url);
 
   if (!quiet) {
     // The config may come from a cloned repository; show what is about to run.
@@ -74,4 +76,22 @@ export async function captureSnapshot(options: CaptureOptions): Promise<CaptureR
   });
 
   return { snapshot, serverName: name, serverVersion: version };
+}
+
+/**
+ * Removes userinfo from a URL so credentials never land in a committed snapshot.
+ *
+ * @param url - The server URL, or undefined.
+ * @returns The URL without username and password, or the input when unparseable.
+ */
+function stripUrlCredentials(url: string | undefined): string | undefined {
+  if (!url) return url;
+  try {
+    const parsed = new URL(url);
+    parsed.username = "";
+    parsed.password = "";
+    return parsed.toString();
+  } catch {
+    return url;
+  }
 }

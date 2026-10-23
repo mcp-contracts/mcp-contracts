@@ -181,6 +181,49 @@ export function resolveProjectPath(
 }
 
 /**
+ * Expands `${NAME}` references to environment variables in a config value.
+ *
+ * Secrets belong in the environment, not in a committed file. A reference to
+ * a variable that is not set is an error, so a missing secret never silently
+ * turns into an empty header or an empty URL segment.
+ *
+ * @param value - The raw config value.
+ * @param where - The config key, for the error message.
+ * @param env - The environment to read (defaults to process.env).
+ * @returns The value with every reference replaced.
+ */
+export function expandEnvRefs(
+  value: string,
+  where: string,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  return value.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_, name: string) => {
+    const resolved = env[name];
+    if (resolved === undefined) {
+      throw new Error(`${where} references environment variable "${name}", which is not set`);
+    }
+    return resolved;
+  });
+}
+
+/**
+ * Expands `${NAME}` references in every value of a string record.
+ *
+ * @param record - The record, or undefined.
+ * @param where - The config key, for error messages.
+ * @returns A new record with expanded values, or undefined.
+ */
+function expandEnvRecord(
+  record: Record<string, string> | undefined,
+  where: string,
+): Record<string, string> | undefined {
+  if (!record) return undefined;
+  return Object.fromEntries(
+    Object.entries(record).map(([k, v]) => [k, expandEnvRefs(v, `${where}.${k}`)]),
+  );
+}
+
+/**
  * Resolves the project config's server block into a transport.
  *
  * Stdio servers spawn with the config file's directory as their working
@@ -201,15 +244,15 @@ export function resolveProjectTransport(project: LoadedProjectConfig): ResolvedT
       transport: "stdio",
       command,
       args,
-      env: server.env,
+      env: expandEnvRecord(server.env, "server.env"),
       cwd: project.dir,
     };
   }
   if (isProjectServerUrl(server)) {
     return {
       transport: server.sse ? "sse" : "streamable-http",
-      url: server.url,
-      headers: server.headers,
+      url: expandEnvRefs(server.url, "server.url"),
+      headers: expandEnvRecord(server.headers, "server.headers"),
     };
   }
   const mcpConfigPath = resolveProjectPath(project, server.config, "server.config");

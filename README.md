@@ -331,6 +331,8 @@ Available on every command, in any position (`mcpdiff check --format json` and `
 
 Instead of repeating transport and baseline flags on every invocation, put them in an `mcpcontracts.json` at your project root. It is discovered by walking up from the current directory (like `tsconfig.json`), or passed explicitly with the global `--project <path>` option.
 
+> **Never commit literal secrets.** `env`, `headers` and `url` values may reference environment variables as `${NAME}`; they are expanded at run time and a missing variable is an error. A snapshot's `capture.source` records the command line or the URL without credentials.
+
 > **The config executes a command.** `server.command`, `args` and `env` are run by every command that captures a live server. Treat `mcpcontracts.json` like `package.json` scripts: only run `mcpdiff` in repositories you trust, and review changes to it in pull requests. See the [trust model](./SECURITY.md#trust-model).
 
 ```jsonc
@@ -339,8 +341,8 @@ Instead of repeating transport and baseline flags on every invocation, put them 
   "server": {
     "command": "node",
     "args": ["dist/index.js"],
-    "env": { "API_KEY": "..." }
-    // or: "url": "http://localhost:3000/mcp", "sse": true, "headers": { "Authorization": "..." }
+    "env": { "API_KEY": "${CONTACTS_API_KEY}" }
+    // or: "url": "http://localhost:3000/mcp", "sse": true, "headers": { "Authorization": "Bearer ${CONTACTS_TOKEN}" }
     // or: "config": "./mcp.json", "name": "my-server"
   },
   "baseline": "contracts/baseline.mcpc.json",

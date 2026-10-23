@@ -78,6 +78,13 @@ describe("captureSnapshot", () => {
     expect(result.snapshot.capture.source).toBe("http://localhost:3000/mcp");
   });
 
+  it("strips credentials from a URL before recording capture.source", async () => {
+    const result = await captureSnapshot({
+      transport: { transport: "streamable-http", url: "https://user:s3cret@host.example/mcp" },
+    });
+    expect(result.snapshot.capture.source).toBe("https://host.example/mcp");
+  });
+
   it("prints connection messages when not quiet", async () => {
     await captureSnapshot({
       transport: { transport: "stdio", command: "node" },

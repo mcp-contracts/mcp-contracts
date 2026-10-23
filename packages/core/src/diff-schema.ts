@@ -2,6 +2,41 @@ import type { SchemaChange } from "./diff-types.js";
 import type { JSONSchema } from "./types.js";
 
 /**
+ * Reads a schema's `properties` as a record, tolerating malformed input.
+ *
+ * @param schema - The schema.
+ * @returns The properties record, empty when absent or not an object.
+ */
+function propertiesOf(schema: JSONSchema): Record<string, JSONSchema> {
+  const props = schema.properties as unknown;
+  return props !== null && typeof props === "object" && !Array.isArray(props)
+    ? (props as Record<string, JSONSchema>)
+    : {};
+}
+
+/**
+ * Reads a schema's `required` list, tolerating malformed input.
+ *
+ * @param schema - The schema.
+ * @returns The required property names, empty when absent or not an array.
+ */
+function requiredOf(schema: JSONSchema): Set<string> {
+  const req = schema.required as unknown;
+  return new Set(Array.isArray(req) ? req.filter((r): r is string => typeof r === "string") : []);
+}
+
+/**
+ * Reads a schema's `enum` list, tolerating malformed input.
+ *
+ * @param schema - The schema.
+ * @returns The enum values, or undefined when absent or not an array.
+ */
+function enumOf(schema: JSONSchema): unknown[] | undefined {
+  const e = schema.enum as unknown;
+  return Array.isArray(e) ? e : undefined;
+}
+
+/**
  * Normalizes a JSON Schema `type` field to an array of strings for comparison.
  *
  * @param type - The type value from a JSON Schema (string, array, or undefined).
@@ -167,8 +202,8 @@ function diffPropertyEnum(
   beforeProp: JSONSchema,
   afterProp: JSONSchema,
 ): SchemaChange[] {
-  const beforeEnum = beforeProp.enum as unknown[] | undefined;
-  const afterEnum = afterProp.enum as unknown[] | undefined;
+  const beforeEnum = enumOf(beforeProp);
+  const afterEnum = enumOf(afterProp);
   if (!beforeEnum && !afterEnum) return [];
   if (!beforeEnum && afterEnum) {
     // Any value was accepted before; now only the listed ones are.
@@ -693,10 +728,10 @@ export function diffSchemas(
   schemaKind: "inputSchema" | "outputSchema",
   basePath: string = schemaKind,
 ): SchemaChange[] {
-  const beforeProps = (beforeSchema.properties ?? {}) as Record<string, JSONSchema>;
-  const afterProps = (afterSchema.properties ?? {}) as Record<string, JSONSchema>;
-  const beforeRequired = new Set((beforeSchema.required ?? []) as string[]);
-  const afterRequired = new Set((afterSchema.required ?? []) as string[]);
+  const beforeProps = propertiesOf(beforeSchema);
+  const afterProps = propertiesOf(afterSchema);
+  const beforeRequired = requiredOf(beforeSchema);
+  const afterRequired = requiredOf(afterSchema);
   const beforePropNames = new Set(Object.keys(beforeProps));
   const afterPropNames = new Set(Object.keys(afterProps));
 
@@ -900,10 +935,10 @@ function diffOutputSchemaFields(
   beforeOutput: JSONSchema,
   afterOutput: JSONSchema,
 ): SchemaChange[] {
-  const beforeProps = (beforeOutput.properties ?? {}) as Record<string, JSONSchema>;
-  const afterProps = (afterOutput.properties ?? {}) as Record<string, JSONSchema>;
-  const beforeRequired = new Set((beforeOutput.required ?? []) as string[]);
-  const afterRequired = new Set((afterOutput.required ?? []) as string[]);
+  const beforeProps = propertiesOf(beforeOutput);
+  const afterProps = propertiesOf(afterOutput);
+  const beforeRequired = requiredOf(beforeOutput);
+  const afterRequired = requiredOf(afterOutput);
 
   return [
     ...diffAddedOutputFields(toolName, afterProps, beforeProps, afterRequired),
