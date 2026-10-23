@@ -1,12 +1,13 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   discoverProjectConfig,
   type LoadedProjectConfig,
   loadProjectConfig,
   resolveBaselinePath,
+  resolveProjectPath,
   resolveProjectTransport,
   resolveTransportOrProject,
 } from "./project-config.js";
@@ -229,5 +230,79 @@ describe("resolveBaselinePath", () => {
     expect(resolveBaselinePath(undefined, null)).toBeUndefined();
     const project = loaded({ failOn: "warning" });
     expect(resolveBaselinePath(undefined, project)).toBeUndefined();
+  });
+});
+
+describe("discoverProjectConfig stops at the repository root", () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), "mcpc-discover-"));
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("does not walk past a directory containing .git", () => {
+    writeFileSync(join(root, "mcpcontracts.json"), "{}");
+    const repo = join(root, "repo");
+    mkdirSync(join(repo, ".git"), { recursive: true });
+    const nested = join(repo, "packages", "a");
+    mkdirSync(nested, { recursive: true });
+    expect(discoverProjectConfig(nested)).toBeNull();
+  });
+
+  it("still finds a config at the repository root itself", () => {
+    const repo = join(root, "repo");
+    mkdirSync(join(repo, ".git"), { recursive: true });
+    writeFileSync(join(repo, "mcpcontracts.json"), "{}");
+    expect(discoverProjectConfig(join(repo, "src"))).toBe(join(repo, "mcpcontracts.json"));
+  });
+});
+
+describe("resolveProjectPath confinement warnings", () => {
+  let dir: string;
+  let stderr: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "mcpc-confine-"));
+    mkdirSync(join(dir, "project"));
+    stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    stderr.mockRestore();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  function project(): LoadedProjectConfig {
+    const projectDir = join(dir, "project");
+    return { path: join(projectDir, "mcpcontracts.json"), dir: projectDir, config: {} };
+  }
+
+  it("is silent for a relative path inside the project", () => {
+    expect(resolveProjectPath(project(), "contracts/baseline.mcpc.json", "baseline")).toBe(
+      join(dir, "project", "contracts", "baseline.mcpc.json"),
+    );
+    expect(stderr).not.toHaveBeenCalled();
+  });
+
+  it("warns for a parent-traversal path", () => {
+    resolveProjectPath(project(), "../outside.json", "baseline");
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('baseline "../outside.json"'));
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining("outside the project directory"));
+  });
+
+  it("warns for an absolute path elsewhere", () => {
+    resolveProjectPath(project(), join(dir, "elsewhere.json"), "watch.paths");
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining("watch.paths"));
+  });
+
+  it("warns when a symlink inside the project resolves outside it", () => {
+    mkdirSync(join(dir, "target"));
+    symlinkSync(join(dir, "target"), join(dir, "project", "contracts"));
+    resolveProjectPath(project(), "contracts/baseline.mcpc.json", "baseline");
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining("resolves to"));
   });
 });

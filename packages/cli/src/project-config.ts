@@ -7,8 +7,8 @@
  * precedence.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { ProjectConfig } from "@mcp-contracts/core";
 import {
   isProjectServerCommand,
@@ -46,6 +46,11 @@ export function discoverProjectConfig(startDir: string): string | null {
     const candidate = join(dir, PROJECT_CONFIG_FILENAME);
     if (existsSync(candidate)) {
       return candidate;
+    }
+    // A repository root is the natural boundary: a config planted in a
+    // directory above the checkout must not be picked up silently.
+    if (existsSync(join(dir, ".git"))) {
+      return null;
     }
     const parent = dirname(dir);
     if (parent === dir) {
@@ -112,14 +117,67 @@ export function loadProjectConfig(
 }
 
 /**
+ * Reports whether `target` lies inside `root`, both already absolute.
+ *
+ * @param root - The containing directory.
+ * @param target - The path to test.
+ * @returns True when target is root or below it.
+ */
+function isInside(root: string, target: string): boolean {
+  const rel = relative(root, target);
+  return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+}
+
+/**
+ * Resolves symlinks for the longest existing prefix of a path.
+ *
+ * The file itself may not exist yet (a baseline about to be written), so the
+ * nearest existing ancestor is what decides where a write really lands.
+ *
+ * @param path - An absolute path.
+ * @returns The real path of the existing prefix joined with the rest.
+ */
+function realpathOfExistingPrefix(path: string): string {
+  let existing = path;
+  const rest: string[] = [];
+  while (!existsSync(existing)) {
+    const parent = dirname(existing);
+    if (parent === existing) return path;
+    rest.unshift(existing.slice(parent.length + 1));
+    existing = parent;
+  }
+  return join(realpathSync(existing), ...rest);
+}
+
+/**
  * Resolves a possibly-relative path against the config file's directory.
+ *
+ * A path that resolves, or whose symlinks resolve, outside the project
+ * directory is warned about. The config may come from a cloned repository and
+ * must not be able to read or write arbitrary locations on the machine. The
+ * warning becomes a rejection in a later release.
  *
  * @param project - The loaded project config.
  * @param path - Path from the config file.
+ * @param label - The config key the path came from, for the warning.
  * @returns An absolute path.
  */
-export function resolveProjectPath(project: LoadedProjectConfig, path: string): string {
-  return isAbsolute(path) ? path : resolve(project.dir, path);
+export function resolveProjectPath(
+  project: LoadedProjectConfig,
+  path: string,
+  label = "path",
+): string {
+  const resolved = isAbsolute(path) ? path : resolve(project.dir, path);
+  const projectReal = realpathOfExistingPrefix(project.dir);
+  const targetReal = realpathOfExistingPrefix(resolved);
+  if (!isInside(project.dir, resolved) || !isInside(projectReal, targetReal)) {
+    const via = targetReal !== resolved ? ` (resolves to "${targetReal}")` : "";
+    process.stderr.write(
+      `Warning: ${label} "${path}" in "${project.path}" points outside the project directory` +
+        `${via}. Paths outside the project will be rejected in a future release.\n`,
+    );
+  }
+  return resolved;
 }
 
 /**
@@ -154,7 +212,7 @@ export function resolveProjectTransport(project: LoadedProjectConfig): ResolvedT
       headers: server.headers,
     };
   }
-  const mcpConfigPath = resolveProjectPath(project, server.config);
+  const mcpConfigPath = resolveProjectPath(project, server.config, "server.config");
   const resolved = readMcpConfig(mcpConfigPath, server.name);
   if (resolved.transport === "stdio") {
     resolved.cwd = dirname(mcpConfigPath);
@@ -207,7 +265,7 @@ export function resolveBaselinePath(
     return flagValue;
   }
   if (project?.config.baseline) {
-    return resolveProjectPath(project, project.config.baseline);
+    return resolveProjectPath(project, project.config.baseline, "baseline");
   }
   return undefined;
 }
