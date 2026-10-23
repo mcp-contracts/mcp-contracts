@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Webhooks are signed and travel over https.** With `MCP_WEBHOOK_SECRET` set, the request body carries an HMAC-SHA256 signature in `X-MCP-Signature` so receivers can reject forged `diff.completed` events. Plain `http` is refused except to loopback hosts, or when `MCP_WEBHOOK_ALLOW_INSECURE=1`. Redirects are no longer followed. Delivery remains best-effort and never affects the exit code (#128).
 - **Config paths are confined to the project.** `baseline`, `watch.paths` and `server.config` values that resolve outside the config file's directory, directly or through a symlink, now produce a warning naming the key and the real target. They will be rejected in a later release. Config discovery no longer walks past the repository root (the first ancestor containing `.git`), so an `mcpcontracts.json` planted above a checkout is not used (#134).
 - **Tightened input constraints are classified as `breaking`.** Adding or changing `pattern`, `const` or `format`, adding an `enum` to an unrestricted parameter, and changing, narrowing or adding array `items` all reject inputs that were valid before and are now reported as `breaking`. Removing any of them is `safe`. Previously `format` changes were `warning` and the rest fell through to the `unclassified` warning (#137).
 

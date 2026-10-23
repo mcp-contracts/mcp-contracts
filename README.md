@@ -216,6 +216,8 @@ Auto-detects CI environments (GitHub Actions, GitLab CI, CircleCI) and selects t
 
 **Exit codes:** `0` = clean, `1` = changes at or above the `--fail-on` threshold, `2` = error.
 
+**Webhooks.** `--webhook <url>` POSTs a JSON payload (`event`, `timestamp`, `source`, `report`) after each diff. Delivery is best-effort and never changes the exit code; a failure is a warning on stderr. The URL must be `https`, except loopback hosts for local receivers; set `MCP_WEBHOOK_ALLOW_INSECURE=1` to override. Redirects are not followed. Set `MCP_WEBHOOK_SECRET` to have the body signed: the receiver recomputes `sha256=<HMAC-SHA256 of the raw body>` and compares it to the `X-MCP-Signature` header before trusting the event.
+
 ### `mcpdiff update`
 
 Captures the live server and writes the baseline. The counterpart to `check`.
