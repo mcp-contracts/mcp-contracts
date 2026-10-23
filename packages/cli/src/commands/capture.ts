@@ -31,7 +31,7 @@ export async function captureSnapshot(options: CaptureOptions): Promise<CaptureR
   const source =
     config.transport === "stdio"
       ? [config.command, ...(config.args ?? [])].join(" ")
-      : stripUrlCredentials(config.url);
+      : redactUrl(config.displaySource ?? config.url);
 
   if (!quiet) {
     // The config may come from a cloned repository; show what is about to run.
@@ -79,19 +79,18 @@ export async function captureSnapshot(options: CaptureOptions): Promise<CaptureR
 }
 
 /**
- * Removes userinfo from a URL so credentials never land in a committed snapshot.
+ * Reduces a URL to origin and path so credentials never land in a committed
+ * snapshot or a log line: userinfo, query string and fragment are dropped.
  *
  * @param url - The server URL, or undefined.
- * @returns The URL without username and password, or the input when unparseable.
+ * @returns The redacted URL, or the input up to any "?" when it cannot be parsed.
  */
-function stripUrlCredentials(url: string | undefined): string | undefined {
+function redactUrl(url: string | undefined): string | undefined {
   if (!url) return url;
   try {
     const parsed = new URL(url);
-    parsed.username = "";
-    parsed.password = "";
-    return parsed.toString();
+    return `${parsed.origin}${parsed.pathname}`;
   } catch {
-    return url;
+    return url.split("?")[0]?.split("#")[0];
   }
 }

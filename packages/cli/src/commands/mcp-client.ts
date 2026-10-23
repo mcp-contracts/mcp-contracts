@@ -26,6 +26,8 @@ export interface ResolvedTransport {
   cwd?: string;
   url?: string;
   headers?: Record<string, string>;
+  /** Unexpanded form of the url for logs and snapshots, when it came from a config template. */
+  displaySource?: string;
 }
 
 /** Data captured from a live MCP server. */

@@ -253,6 +253,8 @@ export function resolveProjectTransport(project: LoadedProjectConfig): ResolvedT
       transport: server.sse ? "sse" : "streamable-http",
       url: expandEnvRefs(server.url, "server.url"),
       headers: expandEnvRecord(server.headers, "server.headers"),
+      // Keep the template, not the expanded value, for anything that gets written or printed.
+      displaySource: server.url,
     };
   }
   const mcpConfigPath = resolveProjectPath(project, server.config, "server.config");

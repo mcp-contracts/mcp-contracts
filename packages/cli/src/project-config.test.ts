@@ -133,6 +133,7 @@ describe("resolveProjectTransport", () => {
       transport: "streamable-http",
       url: "http://localhost:3000/mcp",
       headers: undefined,
+      displaySource: "http://localhost:3000/mcp",
     });
 
     const sse = loaded({
@@ -142,6 +143,7 @@ describe("resolveProjectTransport", () => {
       transport: "sse",
       url: "http://localhost:3000/sse",
       headers: { "X-Key": "v" },
+      displaySource: "http://localhost:3000/sse",
     });
   });
 
@@ -312,7 +314,7 @@ describe("resolveProjectPath confinement warnings", () => {
 const ref = (name: string): string => ["$", "{", name, "}"].join("");
 
 describe("expandEnvRefs", () => {
-  it("replaces ${NAME} references from the environment", () => {
+  it("replaces environment variable references", () => {
     expect(
       expandEnvRefs(`Bearer ${ref("TOKEN")}`, "server.headers.Authorization", { TOKEN: "abc" }),
     ).toBe("Bearer abc");
