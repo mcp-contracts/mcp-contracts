@@ -10,7 +10,7 @@ This document records the key design decisions for the project and the reasoning
 
 **Decision:** Single repo, multiple packages under `packages/`, managed with pnpm workspaces.
 
-**Why:** The packages are tightly coupled (cli depends on core, test will depend on core). A monorepo lets us make cross-cutting changes in a single PR, share TypeScript config, and run CI once. pnpm is faster than npm/yarn, has excellent workspace support, and enforces strict dependency isolation.
+**Why:** The packages are tightly coupled (cli and test depend on core). A monorepo lets us make cross-cutting changes in a single PR, share TypeScript config, and run CI once. pnpm is faster than npm/yarn, has excellent workspace support, and enforces strict dependency isolation.
 
 ---
 
@@ -136,13 +136,13 @@ pnpm test -- --watch
 4. Write at least two test cases in the corresponding `.test.ts` file.
 5. Update the terminal formatter if the rule needs special display (e.g., description diff rendering).
 
-## Project Roadmap
+## Roadmap
 
-### Phase 1 — Schema Diff Tool
-Ship `@mcp-contracts/core` and `@mcp-contracts/cli` with snapshot capture, diffing, and inspection.
+Shipped work is recorded in the [changelog](./CHANGELOG.md) and planned work in [GitHub milestones](https://github.com/mcp-contracts/mcp-contracts/milestones). Ideas under consideration, not committed to a release:
 
-### Phase 2 — Contract Testing
-Ship `@mcp-contracts/test` for automated contract validation against live servers. Includes schema conformance, boundary input testing, behavioral assertions, and Vitest/Jest integration.
-
-### Phase 3 — Ecosystem (current)
-Transparency logs, registry integration, VS Code extension.
+- **Transparency log.** An append-only history of a server's contract versions, in the spirit of Certificate Transparency.
+- **Registry and discovery.** Capture snapshots of servers listed in the MCP Registry, or from `.well-known` metadata without a full connection.
+- **Bundle support.** Snapshot tools directly from `.mcpb` bundles.
+- **Policy as code.** Declarative rules on contracts (for example, no tool may accept a `password` parameter) via OPA/Rego or Cedar.
+- **Notification formatting.** Service-specific webhook payloads for Slack, Discord or PagerDuty on top of the generic JSON webhook.
+- **IDE extension and Python SDK.** Lower priority; opened when there is demand.
