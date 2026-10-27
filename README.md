@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: mcp-contracts/github-action@v0.7.0
+      - uses: mcp-contracts/github-action@v0.8.0
         with:
           baseline: contracts/baseline.mcpc.json
           command: node dist/index.js
