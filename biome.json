@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.2/schema.json",
   "assist": {
     "enabled": true,
     "actions": {
@@ -42,6 +42,6 @@
     }
   },
   "files": {
-    "includes": ["**", "!**/dist", "!**/*.mcpc.json"]
+    "includes": ["**", "!**/dist", "!**/*.mcpc.json", "!**/*.md", "!**/*.yml", "!**/*.yaml"]
   }
 }
