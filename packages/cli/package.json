@@ -1,6 +1,6 @@
 {
   "name": "@mcp-contracts/cli",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "CLI tool for capturing and diffing MCP tool schemas",
   "type": "module",
   "bin": {

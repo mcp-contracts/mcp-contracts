@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm install -g @mcp-contracts/cli@0.9.0
+      - run: npm install -g @mcp-contracts/cli@0.10.0
       - run: mcpdiff check
 `;
 
