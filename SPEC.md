@@ -116,6 +116,8 @@ This ensures that two snapshots with identical tool/resource/prompt definitions 
 
 ---
 
+**What the hash does not cover.** `server` (name, version, protocol version, capabilities), `capture` and `capturedAt` are informational. They appear in reports but are neither hashed nor signed, so a signature does not vouch for them, and `check` does not classify changes to them. Integrity protection applies to `tools`, `resources` and `prompts` only.
+
 ## 2. Diff Classification Rules
 
 When comparing two snapshots (referred to as `before` and `after`), changes are classified into three severity levels.
@@ -155,7 +157,14 @@ The classification is exhaustive by construction: if an entity present in both s
 | Enum values added | `safe` | Old values still valid. |
 | Parameter description changed | `warning` | Same tool poisoning concern as tool description. |
 | Parameter `default` changed | `warning` | May change behavior for calls that omit the parameter. |
-| Parameter `format` added or changed | `warning` | May cause previously valid inputs to fail. |
+| Parameter `format` added or changed | `breaking` | Previously valid inputs fail validation. |
+| Parameter `format` removed | `safe` | More permissive. |
+| Parameter `pattern` or `const` added or changed | `breaking` | Previously valid inputs fail validation. |
+| Parameter `pattern` or `const` removed | `safe` | More permissive. |
+| Enum restriction added to an unrestricted parameter | `breaking` | Only the listed values are accepted now. |
+| Enum restriction removed entirely | `safe` | More permissive. |
+| Array `items` type changed or narrowed, or `items` added | `breaking` | Existing element values fail validation. |
+| Array `items` type widened, or `items` removed | `safe` | Old elements still valid. |
 | `additionalProperties` changed from true/unset to false | `breaking` | Previously accepted extra fields will now be rejected. |
 | `additionalProperties` changed from false to true/unset | `safe` | More permissive. |
 | `minItems`, `maxItems`, `minLength`, `maxLength`, `minimum`, `maximum` made stricter | `breaking` | Previously valid values may now fail. |
@@ -221,105 +230,29 @@ Names are stored and hashed verbatim. Sanitization applies only at render time.
 
 ## 3. CLI Specification
 
-### 3.1 Global Options
+The command surface, flags and output formats are documented in the
+[`@mcp-contracts/cli` README](./packages/cli/README.md). This section records
+behaviour that the reference does not.
 
-```
-mcpdiff [command] [options]
+### 3.1 Exit Codes
 
-Global options:
-  --format <format>    Output format: terminal | json | markdown (default: auto-detect)
-  --no-color           Disable colored output
-  --quiet              Suppress non-essential output
-  --verbose            Show detailed information
-  --version            Show version
-  --help               Show help
-```
+Every command exits `0` when clean, `1` when findings reach the failure
+threshold (`--fail-on`, default `breaking`) and `2` on a tool error (invalid
+files, missing arguments, connection failure, invalid config). Warnings alone
+never fail a command unless `--fail-on warning` is given.
 
-### 3.2 `mcpdiff snapshot`
+### 3.2 Snapshot Capture
 
-Captures a snapshot from a live MCP server.
-
-```
-mcpdiff snapshot [options]
-
-Options:
-  --command <cmd>       Server command to run via stdio transport (e.g., "node server.js")
-  --args <args...>      Additional arguments to pass to the server command
-  --url <url>           Server URL for streamable-http transport
-  --config <path>       Path to mcp.json config file
-  --server <name>       Server name from config file (used with --config)
-  --output, -o <path>   Output file path (default: stdout)
-  --env <key=value...>  Environment variables to pass to the server
-
-Examples:
-  mcpdiff snapshot --command "node dist/index.js" -o snapshot.mcpc.json
-  mcpdiff snapshot --url http://localhost:3000/mcp -o snapshot.mcpc.json
-  mcpdiff snapshot --config ./mcp.json --server my-server -o snapshot.mcpc.json
-```
-
-**Behavior:**
 1. Connect to the MCP server using the specified transport.
 2. Complete the initialization handshake.
-3. Call `tools/list`, `resources/list`, `resources/templates/list` and `prompts/list` for each capability the server advertises, following `nextCursor` within bounds: at most 1000 pages and 10 000 items per list, no repeated cursor, and a five-minute deadline for the whole capture.
-4. Construct the snapshot object.
-5. Compute the content hash.
-6. Write to the output file (or stdout).
-7. Disconnect from the server.
+3. Call `tools/list`, `resources/list`, `resources/templates/list` and `prompts/list` for each capability the server advertises, following `nextCursor` within bounds: at most 1000 pages and 10 000 items per list, no repeated cursor, and a five-minute deadline for the whole capture. A capability the server does not advertise is recorded as an empty record.
+4. Construct the snapshot object and compute the content hash.
+5. Write to the output file, or to stdout: formatted JSON on a TTY, compact JSON when piped.
+6. Disconnect from the server.
 
 **Error handling:**
 - If the server fails to start or connect within 30 seconds, exit with code 2.
 - If any list call for an advertised capability fails, or a pagination bound is exceeded, exit with code 2 and write nothing. A partial interface is never written as a snapshot.
-- If a list call fails (e.g., server doesn't support resources), omit that section with an empty object and log a warning.
-- If `--output` is not specified and stdout is a TTY, print the snapshot as formatted JSON. If piped, print compact JSON.
-
-### 3.3 `mcpdiff diff`
-
-Compares two snapshots and reports changes.
-
-```
-mcpdiff diff <before> <after> [options]
-
-Arguments:
-  before                Path to the "before" snapshot file
-  after                 Path to the "after" snapshot file
-
-Options:
-  --severity <level>    Minimum severity to report: safe | warning | breaking (default: safe)
-  --fail-on <level>     Exit with code 1 if changes at this level or above: safe | warning | breaking (default: breaking)
-  --output, -o <path>   Write report to file instead of stdout
-
-Examples:
-  mcpdiff diff v1.mcpc.json v2.mcpc.json
-  mcpdiff diff v1.mcpc.json v2.mcpc.json --format json -o diff-report.json
-  mcpdiff diff v1.mcpc.json v2.mcpc.json --fail-on warning
-```
-
-**Exit codes:**
-- `0` — No changes at or above the `--fail-on` level.
-- `1` — Changes at or above the `--fail-on` level detected.
-- `2` — Error (invalid files, missing arguments, etc.).
-
-### 3.4 `mcpdiff inspect`
-
-Displays a summary of a snapshot file.
-
-```
-mcpdiff inspect <snapshot> [options]
-
-Arguments:
-  snapshot              Path to a snapshot file
-
-Options:
-  --tools               List all tools with their descriptions
-  --resources           List all resources
-  --prompts             List all prompts
-  --schema <tool>       Show the full input schema for a specific tool
-
-Examples:
-  mcpdiff inspect snapshot.mcpc.json
-  mcpdiff inspect snapshot.mcpc.json --tools
-  mcpdiff inspect snapshot.mcpc.json --schema create_contact
-```
 
 ---
 
@@ -420,7 +353,7 @@ Verification performs three checks in order:
 
 ### 5.5 Content Hash Verification
 
-`mcpdiff verify-hash` provides a quick integrity check without keys:
+`mcpdiff verify` without `--key` provides a quick integrity check:
 
 1. Recompute the content hash from the snapshot's `tools`, `resources`, and `prompts`.
 2. Compare to the stored `contentHash` field.
@@ -431,12 +364,12 @@ Verification performs three checks in order:
 ```
 mcpdiff sign <snapshot> --key <private-key-path>
 mcpdiff verify <snapshot> --key <public-key-path> [--signature <sig-path>]
-mcpdiff verify-hash <snapshot>
+mcpdiff verify <snapshot>                 # content hash only
 ```
 
 ### 5.7 CI Integration
 
-The `ci` command accepts `--verify-signature` and `--signature-key <path>` to verify the baseline signature before diffing. Falls back to `MCP_SIGNATURE_KEY` environment variable (PEM content or file path).
+The `check` command accepts `--verify-signature` and `--signature-key <path>` to verify the baseline signature before diffing, falling back to the `MCP_SIGNATURE_KEY` environment variable (PEM content or file path). In CI the key should come from a secret, not from the checkout.
 
 The GitHub Action accepts `verify-signature` and `signature-key` inputs for the same purpose.
 
@@ -456,30 +389,7 @@ The `@mcp-contracts/test` package tests that a live MCP server conforms to its c
 
 ### 6.2 CLI
 
-```
-mcp-test run <contract> [options]
-
-Options:
-  --command <cmd>          Server command for stdio transport
-  --args <args...>         Arguments for the server command
-  --url <url>              Server URL for streamable-http transport
-  --sse                    Use SSE transport
-  --header <header...>     Custom headers (Key: Value)
-  --env <pairs...>         Environment variables (KEY=VALUE)
-  --format <format>        Output format: terminal | json | markdown
-  --no-conformance         Skip schema conformance tests
-  --no-boundary            Skip boundary input tests
-  --allow-extra-tools      Allow tools not in the contract
-  --ignore-descriptions    Ignore description differences
-  --skip-tools <names...>  Skip specific tools
-  --timeout <ms>           Global timeout (default: 120000)
-  -o, --output <path>      Write report to file
-
-Exit codes:
-  0 — All tests pass
-  1 — One or more tests failed
-  2 — Tool error (connection failure, invalid contract, etc.)
-```
+The suite runs from the command line as `mcpdiff test <contract> [transport options]` (see the [CLI reference](./packages/cli/README.md#mcpdiff-test)). Suite options: `--no-conformance`, `--no-boundary`, `--allow-extra-tools`, `--ignore-descriptions`, `--skip-tools <names...>`, `--timeout <ms>` (default 120000). Exit codes: `0` all tests pass, `1` one or more failed, `2` tool error. The `mcp-test run` bin shipped by `@mcp-contracts/test` is deprecated and takes the same arguments.
 
 ### 6.3 Vitest/Jest Integration
 
@@ -599,7 +509,4 @@ server renames itself.
 
 ## 8. Future Features
 
-These are planned but not yet implemented. Listed here for context.
-
-- **Transparency log** — Append-only history of contract versions.
-- **Registry integration** — Publish contracts alongside servers in the MCP Registry.
+Planned work is tracked in [GitHub milestones](https://github.com/mcp-contracts/mcp-contracts/milestones); ideas under consideration are listed in the [Roadmap](./CONTRIBUTING.md#roadmap) section of CONTRIBUTING.md.

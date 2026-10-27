@@ -1,12 +1,14 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   discoverProjectConfig,
+  expandEnvRefs,
   type LoadedProjectConfig,
   loadProjectConfig,
   resolveBaselinePath,
+  resolveProjectPath,
   resolveProjectTransport,
   resolveTransportOrProject,
 } from "./project-config.js";
@@ -131,6 +133,7 @@ describe("resolveProjectTransport", () => {
       transport: "streamable-http",
       url: "http://localhost:3000/mcp",
       headers: undefined,
+      displaySource: "http://localhost:3000/mcp",
     });
 
     const sse = loaded({
@@ -140,6 +143,7 @@ describe("resolveProjectTransport", () => {
       transport: "sse",
       url: "http://localhost:3000/sse",
       headers: { "X-Key": "v" },
+      displaySource: "http://localhost:3000/sse",
     });
   });
 
@@ -229,5 +233,134 @@ describe("resolveBaselinePath", () => {
     expect(resolveBaselinePath(undefined, null)).toBeUndefined();
     const project = loaded({ failOn: "warning" });
     expect(resolveBaselinePath(undefined, project)).toBeUndefined();
+  });
+});
+
+describe("discoverProjectConfig stops at the repository root", () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), "mcpc-discover-"));
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("does not walk past a directory containing .git", () => {
+    writeFileSync(join(root, "mcpcontracts.json"), "{}");
+    const repo = join(root, "repo");
+    mkdirSync(join(repo, ".git"), { recursive: true });
+    const nested = join(repo, "packages", "a");
+    mkdirSync(nested, { recursive: true });
+    expect(discoverProjectConfig(nested)).toBeNull();
+  });
+
+  it("still finds a config at the repository root itself", () => {
+    const repo = join(root, "repo");
+    mkdirSync(join(repo, ".git"), { recursive: true });
+    writeFileSync(join(repo, "mcpcontracts.json"), "{}");
+    expect(discoverProjectConfig(join(repo, "src"))).toBe(join(repo, "mcpcontracts.json"));
+  });
+});
+
+describe("resolveProjectPath confinement warnings", () => {
+  let dir: string;
+  let stderr: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "mcpc-confine-"));
+    mkdirSync(join(dir, "project"));
+    stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    stderr.mockRestore();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  function project(): LoadedProjectConfig {
+    const projectDir = join(dir, "project");
+    return { path: join(projectDir, "mcpcontracts.json"), dir: projectDir, config: {} };
+  }
+
+  it("is silent for a relative path inside the project", () => {
+    expect(resolveProjectPath(project(), "contracts/baseline.mcpc.json", "baseline")).toBe(
+      join(dir, "project", "contracts", "baseline.mcpc.json"),
+    );
+    expect(stderr).not.toHaveBeenCalled();
+  });
+
+  it("warns for a parent-traversal path", () => {
+    resolveProjectPath(project(), "../outside.json", "baseline");
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('baseline "../outside.json"'));
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining("outside the project directory"));
+  });
+
+  it("warns for an absolute path elsewhere", () => {
+    resolveProjectPath(project(), join(dir, "elsewhere.json"), "watch.paths");
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining("watch.paths"));
+  });
+
+  it("warns when a symlink inside the project resolves outside it", () => {
+    mkdirSync(join(dir, "target"));
+    symlinkSync(join(dir, "target"), join(dir, "project", "contracts"));
+    resolveProjectPath(project(), "contracts/baseline.mcpc.json", "baseline");
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining("resolves to"));
+  });
+});
+
+/** Builds a `${NAME}` reference without tripping the template-placeholder lint rule. */
+const ref = (name: string): string => ["$", "{", name, "}"].join("");
+
+describe("expandEnvRefs", () => {
+  it("replaces environment variable references", () => {
+    expect(
+      expandEnvRefs(`Bearer ${ref("TOKEN")}`, "server.headers.Authorization", { TOKEN: "abc" }),
+    ).toBe("Bearer abc");
+    expect(
+      expandEnvRefs(`https://${ref("HOST")}/mcp?k=${ref("KEY")}`, "server.url", {
+        HOST: "h",
+        KEY: "v",
+      }),
+    ).toBe("https://h/mcp?k=v");
+  });
+
+  it("leaves values without references unchanged", () => {
+    expect(expandEnvRefs("plain", "server.env.X", {})).toBe("plain");
+  });
+
+  it("throws when a referenced variable is not set", () => {
+    expect(() => expandEnvRefs(ref("MISSING"), "server.env.API_KEY", {})).toThrow(
+      'server.env.API_KEY references environment variable "MISSING", which is not set',
+    );
+  });
+});
+
+describe("resolveProjectTransport expands environment references", () => {
+  it("expands env and header values and the url", () => {
+    process.env["MCPC_TEST_TOKEN"] = "t0k";
+    try {
+      const url = resolveProjectTransport({
+        path: "/p/mcpcontracts.json",
+        dir: "/p",
+        config: {
+          server: {
+            url: `https://x/${ref("MCPC_TEST_TOKEN")}`,
+            headers: { A: ref("MCPC_TEST_TOKEN") },
+          },
+        },
+      });
+      expect(url.url).toBe("https://x/t0k");
+      expect(url.headers).toEqual({ A: "t0k" });
+      const stdio = resolveProjectTransport({
+        path: "/p/mcpcontracts.json",
+        dir: "/p",
+        config: { server: { command: "node s.js", env: { KEY: ref("MCPC_TEST_TOKEN") } } },
+      });
+      expect(stdio.env).toEqual({ KEY: "t0k" });
+    } finally {
+      delete process.env["MCPC_TEST_TOKEN"];
+    }
   });
 });

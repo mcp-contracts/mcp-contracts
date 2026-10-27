@@ -203,7 +203,7 @@ describe("diffSchemas — input schema changes", () => {
     expect(def?.severity).toBe("warning");
   });
 
-  it("detects format added as warning", () => {
+  it("detects format added as breaking", () => {
     const before: JSONSchema = {
       type: "object",
       properties: { email: { type: "string" } },
@@ -216,10 +216,10 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const fmt = changes.find((c) => c.id.includes("formatChanged"));
     expect(fmt).toBeDefined();
-    expect(fmt?.severity).toBe("warning");
+    expect(fmt?.severity).toBe("breaking");
   });
 
-  it("detects format changed as warning", () => {
+  it("detects format changed as breaking", () => {
     const before: JSONSchema = {
       type: "object",
       properties: { date: { type: "string", format: "date" } },
@@ -232,7 +232,7 @@ describe("diffSchemas — input schema changes", () => {
     const changes = inputDiff(before, after);
     const fmt = changes.find((c) => c.id.includes("formatChanged"));
     expect(fmt).toBeDefined();
-    expect(fmt?.severity).toBe("warning");
+    expect(fmt?.severity).toBe("breaking");
   });
 
   it("detects additionalProperties changed from true/unset to false as breaking", () => {
@@ -331,6 +331,99 @@ describe("diffSchemas — input schema changes", () => {
     const c = changes.find((c) => c.id.includes("minItemsLenient"));
     expect(c).toBeDefined();
     expect(c?.severity).toBe("safe");
+  });
+
+  it("detects format removed as safe", () => {
+    const changes = inputDiff(
+      { type: "object", properties: { email: { type: "string", format: "email" } } },
+      { type: "object", properties: { email: { type: "string" } } },
+    );
+    const c = changes.find((c) => c.id.endsWith("formatRemoved"));
+    expect(c?.severity).toBe("safe");
+  });
+
+  it("detects pattern added as breaking and removed as safe", () => {
+    const plain = { type: "object", properties: { email: { type: "string" } } };
+    const strict = {
+      type: "object",
+      properties: { email: { type: "string", pattern: "^[^@]+@[^@]+$" } },
+    };
+    const added = inputDiff(plain, strict).find((c) => c.id.endsWith("patternAdded"));
+    expect(added?.severity).toBe("breaking");
+    expect(added?.path).toBe("inputSchema.properties.email.pattern");
+    const removed = inputDiff(strict, plain).find((c) => c.id.endsWith("patternRemoved"));
+    expect(removed?.severity).toBe("safe");
+  });
+
+  it("detects pattern changed as breaking", () => {
+    const changes = inputDiff(
+      { type: "object", properties: { id: { type: "string", pattern: "^[a-z]+$" } } },
+      { type: "object", properties: { id: { type: "string", pattern: "^[a-z]{3}$" } } },
+    );
+    expect(changes.find((c) => c.id.endsWith("patternChanged"))?.severity).toBe("breaking");
+  });
+
+  it("detects const added as breaking", () => {
+    const changes = inputDiff(
+      { type: "object", properties: { mode: { type: "string" } } },
+      { type: "object", properties: { mode: { type: "string", const: "fast" } } },
+    );
+    expect(changes.find((c) => c.id.endsWith("constAdded"))?.severity).toBe("breaking");
+  });
+
+  it("detects a new enum restriction as breaking and its removal as safe", () => {
+    const open = { type: "object", properties: { level: { type: "string" } } };
+    const closed = { type: "object", properties: { level: { type: "string", enum: ["a", "b"] } } };
+    expect(inputDiff(open, closed).find((c) => c.id.endsWith("enumAdded"))?.severity).toBe(
+      "breaking",
+    );
+    expect(inputDiff(closed, open).find((c) => c.id.endsWith("enumRemoved"))?.severity).toBe(
+      "safe",
+    );
+  });
+
+  it("detects array items type changes", () => {
+    const strings = {
+      type: "object",
+      properties: { tags: { type: "array", items: { type: "string" } } },
+    };
+    const objects = {
+      type: "object",
+      properties: { tags: { type: "array", items: { type: "object" } } },
+    };
+    const changed = inputDiff(strings, objects).find(
+      (c) => c.path === "inputSchema.properties.tags.items",
+    );
+    expect(changed?.severity).toBe("breaking");
+    const widened = inputDiff(strings, {
+      type: "object",
+      properties: { tags: { type: "array", items: { type: ["string", "number"] } } },
+    }).find((c) => c.id.endsWith("typeWidened"));
+    expect(widened?.severity).toBe("safe");
+    const constrained = inputDiff(
+      { type: "object", properties: { tags: { type: "array" } } },
+      strings,
+    ).find((c) => c.id.endsWith("itemsAdded"));
+    expect(constrained?.severity).toBe("breaking");
+  });
+
+  it("tolerates malformed nested required and enum without throwing", () => {
+    const before = {
+      type: "object",
+      properties: { opts: { type: "object", properties: { a: { type: "string" } } } },
+    } as unknown as JSONSchema;
+    const after = {
+      type: "object",
+      properties: {
+        opts: {
+          type: "object",
+          properties: { a: { type: "string", enum: 5 } },
+          required: 5,
+        },
+      },
+    } as unknown as JSONSchema;
+    expect(() => inputDiff(before, after)).not.toThrow();
+    expect(() => inputDiff(after, before)).not.toThrow();
   });
 
   it("recurses into nested object schemas", () => {

@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Upgrading
+
+Four behaviours change in this release. None requires a different command line, but each can change a result you were used to:
+
+- **`check` and `diff` may now exit 1 where they exited 0.** Adding or changing a parameter's `format`, `pattern` or `const`, restricting an open parameter to an `enum`, and adding, changing or narrowing array `items` are `breaking`. Until now `format` was a `warning` and the others were `unclassified` warnings. If a server of yours tightened an input on purpose, re-capture the baseline with `mcpdiff update`; if it tightened one by accident, this is the release that tells you.
+- **Plain-http webhooks to non-loopback hosts are refused.** Use an `https` receiver, or set `MCP_WEBHOOK_ALLOW_INSECURE=1` to keep the old behaviour. Redirects are no longer followed. Set `MCP_WEBHOOK_SECRET` to have payloads signed.
+- **A config above the repository root is no longer found.** Discovery stops at the first directory containing `.git`. Move the `mcpcontracts.json` into the repository or pass `--project <path>`.
+- **Config paths outside the project warn.** `baseline`, `watch.paths` and `server.config` values that resolve outside the config file's directory print a warning naming the key. Nothing is rejected yet; that follows in a later minor release. Move the files into the project or expect the warning.
+
+Everything else in this release is additive: environment references in config values, the negotiated protocol version in snapshots, redacted URLs in `capture.source`.
+
+### Internal
+
+- **CI supply chain tightened.** Workflow actions are pinned to commit SHAs with version comments, the CI workflow runs with a read-only token, the publish workflow publishes an explicitly named tarball instead of a glob, Dependabot now updates the release-notes action, and a repository ruleset restricts creating, moving or deleting `v*` tags to administrators (#135).
+
+### Changed
+
+- **Documentation trimmed.** The README keeps the overview, quick start, project config and CI integration; the full command reference now lives in the `@mcp-contracts/cli` package README. `TASKS.md` and `MILESTONES.md`, which described work that shipped months ago, are removed, and the ideas still under consideration move to a Roadmap section in `CONTRIBUTING.md`. `SPEC.md` section 3 no longer duplicates the command reference.
+- **Capture metadata is honest and secret-free.** Snapshots record the protocol version actually negotiated with the server instead of the SDK's latest constant, and `capture.source` records a URL as origin and path only, taken from the unexpanded config template when there is one, so credentials in userinfo, path or query never reach the snapshot or the connection log line. `mcpcontracts.json` values for `env`, `headers` and `url` may reference environment variables as `${NAME}`, expanded at run time, so tokens stay out of committed files. Graph output escapes server names and versions correctly for DOT and Mermaid, and malformed nested schemas (`required` or `enum` that are not arrays) no longer crash the diff. SPEC 1.5 states that `server`, `capture` and `capturedAt` are informational and not covered by the hash or signature (#132).
+- **Webhooks are signed and travel over https.** With `MCP_WEBHOOK_SECRET` set, the request body carries an HMAC-SHA256 signature in `X-MCP-Signature` so receivers can reject forged `diff.completed` events. Plain `http` is refused except to loopback hosts, or when `MCP_WEBHOOK_ALLOW_INSECURE=1`. Redirects are no longer followed. Delivery remains best-effort and never affects the exit code (#128).
+- **Config paths are confined to the project.** `baseline`, `watch.paths` and `server.config` values that resolve outside the config file's directory, directly or through a symlink, now produce a warning naming the key and the real target. They will be rejected in a later release. Config discovery no longer walks past the repository root (the first ancestor containing `.git`), so an `mcpcontracts.json` planted above a checkout is not used (#134).
+- **Tightened input constraints are classified as `breaking`.** Adding or changing `pattern`, `const` or `format`, adding an `enum` to an unrestricted parameter, and changing, narrowing or adding array `items` all reject inputs that were valid before and are now reported as `breaking`. Removing any of them is `safe`. Previously `format` changes were `warning` and the rest fell through to the `unclassified` warning (#137).
+
 ## [0.9.0] - 2026-10-22
 
 ### Fixed

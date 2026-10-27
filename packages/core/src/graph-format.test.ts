@@ -73,12 +73,17 @@ describe("formatGraphMermaid", () => {
     expect(formatGraphMermaid(identical)).toContain("s0 --- t0");
   });
 
-  it("escapes quotes in labels", () => {
+  it("escapes quotes and brackets in labels with Mermaid entities", () => {
     const quoted: DependencyGraph = {
-      servers: [{ name: 'we"ird', version: "1.0.0", tools: [], resourceCount: 0, promptCount: 0 }],
+      servers: [
+        { name: 'we"ird', version: '1.0"]; evil', tools: [], resourceCount: 0, promptCount: 0 },
+      ],
       overlaps: [],
     };
-    expect(formatGraphMermaid(quoted)).toContain('\\"');
+    const out = formatGraphMermaid(quoted);
+    expect(out).toContain("we#quot;ird");
+    expect(out).toContain("v1.0#quot;#93;; evil");
+    expect(out).not.toContain('\\"');
   });
 });
 
@@ -102,5 +107,23 @@ describe("formatGraphJson", () => {
   it("round-trips the graph structure", () => {
     const output = formatGraphJson(graph);
     expect(JSON.parse(output)).toEqual(graph);
+  });
+
+  it("escapes server name and version inside the DOT label attribute", () => {
+    const hostile: DependencyGraph = {
+      servers: [
+        {
+          name: "srv",
+          version: '1.0", URL="https://evil',
+          tools: [],
+          resourceCount: 0,
+          promptCount: 0,
+        },
+      ],
+      overlaps: [],
+    };
+    const out = formatGraphDot(hostile);
+    expect(out).toContain('label="srv\\nv1.0\\", URL=\\"https://evil (0 tools)"');
+    expect(out).not.toMatch(/[^\\]", URL=/);
   });
 });
