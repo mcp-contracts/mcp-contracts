@@ -376,7 +376,7 @@ describe("diffSnapshots blind-spot coverage", () => {
     const after = snap([
       {
         name: "t",
-        inputSchema: { type: "object", properties: { p: { type: "string", pattern: "^x" } } },
+        inputSchema: { type: "object", properties: { p: { type: "string", multipleOf: 2 } } },
       },
     ]);
     expect(before.contentHash).not.toBe(after.contentHash);

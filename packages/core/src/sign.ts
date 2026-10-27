@@ -5,7 +5,7 @@
  * is a SHA-256 hash of the canonical tools/resources/prompts content.
  * Signatures are stored as detached `.mcpc.sig` JSON files.
  *
- * @see MILESTONES.md v0.4.0 for the design rationale.
+ * @see SPEC.md section 5 for the signature format and verification process.
  */
 
 import { constants, createPrivateKey, createPublicKey, sign, verify } from "node:crypto";

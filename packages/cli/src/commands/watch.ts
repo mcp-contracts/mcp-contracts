@@ -45,7 +45,7 @@ export function resolveWatchOptions(
     10,
   );
   const projectWatchPaths = project?.config.watch?.paths?.map((p) =>
-    resolveProjectPath(project, p),
+    resolveProjectPath(project, p, "watch.paths"),
   );
   const watchPaths = (options["watchPaths"] as string[] | undefined) ?? projectWatchPaths ?? ["."];
   const baselinePath =

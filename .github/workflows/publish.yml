@@ -15,11 +15,11 @@ jobs:
       packages: write
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.1.0
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: pnpm
@@ -43,7 +43,9 @@ jobs:
             echo "@mcp-contracts/core@$VERSION already published — skipping"
           else
             pnpm pack
-            npm publish *.tgz --access public --provenance
+            TARBALL="mcp-contracts-core-$VERSION.tgz"
+            test -f "$TARBALL" || { echo "expected $TARBALL from pnpm pack"; ls *.tgz; exit 1; }
+            npm publish "$TARBALL" --access public --provenance
           fi
         working-directory: packages/core
 
@@ -54,7 +56,9 @@ jobs:
             echo "@mcp-contracts/cli@$VERSION already published — skipping"
           else
             pnpm pack
-            npm publish *.tgz --access public --provenance
+            TARBALL="mcp-contracts-cli-$VERSION.tgz"
+            test -f "$TARBALL" || { echo "expected $TARBALL from pnpm pack"; ls *.tgz; exit 1; }
+            npm publish "$TARBALL" --access public --provenance
           fi
         working-directory: packages/cli
 
@@ -65,11 +69,13 @@ jobs:
             echo "@mcp-contracts/test@$VERSION already published — skipping"
           else
             pnpm pack
-            npm publish *.tgz --access public --provenance
+            TARBALL="mcp-contracts-test-$VERSION.tgz"
+            test -f "$TARBALL" || { echo "expected $TARBALL from pnpm pack"; ls *.tgz; exit 1; }
+            npm publish "$TARBALL" --access public --provenance
           fi
         working-directory: packages/test
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           registry-url: https://npm.pkg.github.com
