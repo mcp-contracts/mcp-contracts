@@ -140,7 +140,7 @@ The action exposes `has-changes`, `has-breaking`, `summary` and `exit-code` as o
 ```yaml
 steps:
   - uses: actions/checkout@v4
-  - run: npm install -g @mcp-contracts/cli@0.9.0   # pin to a release
+  - run: npm install -g @mcp-contracts/cli@0.10.0   # pin to a release
   - run: mcpdiff check                              # reads the committed mcpcontracts.json
 
   # With signature verification. The public key comes from a secret, never
