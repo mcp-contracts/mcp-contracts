@@ -17,4 +17,5 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_conventional_commits: true
+          draft: "false"
           draft: false
